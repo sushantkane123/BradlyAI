@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  cycraft-backend:
+    build: .
+    container_name: cycraft_driverless_soc
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=CyCraft AI
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - cycraft_db:/app/data
+    restart: unless-stopped
+
+volumes:
+  cycraft_db:
+    name: cycraft_db_volume
