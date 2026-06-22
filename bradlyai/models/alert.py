@@ -15,6 +15,10 @@ class AlertModel(Base):
     mitre = Column(String)
     status = Column(String)
     ai_confidence = Column(String)
+    signature = Column(String, index=True)  # hash(title+endpoint+ip+user+mitre) — for duplicate detection
+    closed_at = Column(DateTime, nullable=True)
+    closed_reason = Column(String, nullable=True)
+    closed_by = Column(String, nullable=True)  # "L1_AGENT" or analyst username
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     storyline = relationship("AlertStorylineModel", back_populates="alert", cascade="all, delete-orphan")
 

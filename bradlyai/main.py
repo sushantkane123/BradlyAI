@@ -15,7 +15,7 @@ from bradlyai.config import settings
 from bradlyai.database import engine, Base, SessionLocal
 from bradlyai.models.alert import AlertModel, AlertStorylineModel
 from bradlyai.models.asset import AssetModel, AssetFindingModel
-from bradlyai.routers import alerts, asm, air, forensics, mitre, chat, ws, system, ingest, integration
+from bradlyai.routers import alerts, asm, air, forensics, mitre, chat, ws, system, ingest, integration, l1_agent
 from bradlyai.services.live_simulation_worker import live_worker
 
 logging.basicConfig(
@@ -111,7 +111,13 @@ seed_database()
 async def lifespan(app: FastAPI):
     if settings.LIVE_SIMULATION_WORKER_ACTIVE:
         live_worker.start(ws_manager=ws.manager, interval=settings.SIMULATION_INTERVAL_SECONDS)
-    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} started — Env: {settings.ENVIRONMENT}")
+    # Seed default L1 Agent whitelist on startup
+    try:
+        from bradlyai.services.whitelist import seed_defaults
+        seed_defaults()
+    except Exception as e:
+        logger.warning(f"Could not seed L1 Agent whitelist: {e}")
+    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} started — Env: {settings.ENVIRONMENT} | L1 Agent: ready")
     yield
     live_worker.stop()
     logger.info("🛑 BradlyAI shut down gracefully.")
@@ -164,6 +170,7 @@ app.include_router(ingest.router, prefix=api_prefix)
 app.include_router(integration.router, prefix=api_prefix)
 app.include_router(ws.router, prefix=api_prefix)
 app.include_router(system.router, prefix=api_prefix)
+app.include_router(l1_agent.router, prefix=api_prefix)
 
 
 @app.get("/health", tags=["Health"])
@@ -171,7 +178,8 @@ def health_check():
     db_ok = False
     try:
         db = SessionLocal()
-        db.execute("SELECT 1")
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
         db.close()
         db_ok = True
     except Exception:
