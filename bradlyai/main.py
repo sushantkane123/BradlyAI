@@ -102,8 +102,11 @@ def seed_database():
         db.close()
 
 
-# ── Ensure tables + seed exist at import time (TestClient compat) ──────
-Base.metadata.create_all(bind=engine)
+# ── Ensure tables + columns exist (handles existing DBs with new columns) ──
+from bradlyai.migrations import run_migrations_and_create
+result = run_migrations_and_create(engine, Base)
+if result["count"] > 0:
+    logger.info(f"🔧 Migrated {result['count']} columns: {', '.join(result['added_columns'])}")
 seed_database()
 
 
