@@ -1,129 +1,626 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BradlyAI - Autonomous Driverless SOC & Incident Response Platform</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* CSS animations for interactive SVGs and loaders */
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .animation-spin {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(0.95); }
-        }
-        .animation-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BradlyAI SOC — Security Operations Center</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
-    <!-- Header & App Navigation -->
-    <header>
-        <div class="logo-container" onclick="app.switchTab('dashboard')">
-            <div class="logo-hex">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            </div>
-            <div class="logo-text">
-                BradlyAI <span style="font-weight: 300;">AI</span>
-            </div>
-            <span class="logo-tag">Driverless SOC</span>
+  <!-- ============================== TOP BAR ============================== -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L3 7v6c0 5 4 9 9 10 5-1 9-5 9-10V7l-9-5z" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+        <div class="brand-text">
+          <span class="brand-name">BradlyAI</span>
+          <span class="brand-sub">Driverless SOC</span>
         </div>
-
-        <nav class="nav-tabs">
-            <button class="nav-btn active" data-tab="dashboard">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                <span>Executive Dashboard</span>
-            </button>
-            <button class="nav-btn" data-tab="air">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                <span>AIR Live Pipeline</span>
-            </button>
-            <button class="nav-btn" data-tab="asm">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                <span>Attack Surface (ASM)</span>
-            </button>
-            <button class="nav-btn" data-tab="forensics">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                <span>AI Threat Hunter</span>
-            </button>
-            <button class="nav-btn" data-tab="mitre">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <span>MITRE ATT&CK Matrix</span>
-            </button>
-            <button class="nav-btn" data-tab="copilot">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>AI Security Copilot</span>
-            </button>
-        </nav>
-
-        <div class="header-actions">
-            <div class="driverless-badge">
-                <span class="status-dot"></span>
-                <span>Driverless Active</span>
-            </div>
-
-            <button onclick="app.openSettingsModal()" class="btn-filter" style="background:rgba(255,255,255,0.05); border-color:var(--border-color); color:white; display:flex; align-items:center; gap:8px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                <span>SOC Settings</span>
-            </button>
-
-            <button id="btn-run-demo" class="btn-trigger-attack" style="background:linear-gradient(135deg, #8b5cf6, #ec4899);margin-right:8px;" onclick="app.runManagementDemo()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>ð¯ Run Management Demo</span></button><button id="btn-trigger-sim" class="btn-trigger-attack">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <span>Trigger Simulated Attack</span>
-            </button>
-        </div>
-    </header>
-
-    <!-- Real-time Security Marquee Banner -->
-    <div class="security-ticker">
-        <div class="ticker-label">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="12" cy="12" r="10"/></svg>
-            <span>Autonomous Triage Stream</span>
-        </div>
-        <div class="ticker-content" id="ticker-content">
-            <!-- Populated by JS -->
-        </div>
+      </div>
+      <div class="env-badge"><span class="env-dot"></span>PRODUCTION</div>
     </div>
 
-    <!-- Main Dynamic Application Content Area -->
-    <main>
-        <!-- Top Stats (Visible across core views) -->
-        <div class="stats-grid" id="stats-grid">
-            <!-- Populated by JS -->
+    <div class="topbar-center">
+      <div class="global-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+        <input type="text" placeholder="Search alerts, IPs, hosts, MITRE techniques…" id="globalSearch" />
+        <kbd>⌘K</kbd>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="time-range" id="timeRange">
+        <button class="tr-btn" data-range="1h">1H</button>
+        <button class="tr-btn" data-range="24h">24H</button>
+        <button class="tr-btn active" data-range="7d">7D</button>
+        <button class="tr-btn" data-range="30d">30D</button>
+      </div>
+      <div class="status-pill" id="healthPill">
+        <span class="spinner"></span>
+        <span class="pill-text">Connecting…</span>
+      </div>
+      <div class="user-chip">
+        <div class="user-avatar">SO</div>
+        <div class="user-info">
+          <span class="user-name">SOC Analyst</span>
+          <span class="user-role">L1 Triage</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================== APP SHELL ============================== -->
+  <div class="app-shell">
+    <!-- ============== SIDEBAR ============== -->
+    <aside class="sidebar">
+      <nav class="nav">
+        <button class="nav-item active" data-tab="overview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" /></svg>
+          <span>Overview</span>
+        </button>
+        <button class="nav-item" data-tab="incidents">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><circle cx="12" cy="17" r="1" /></svg>
+          <span>Incidents</span>
+          <span class="nav-badge" id="badge-incidents">0</span>
+        </button>
+        <button class="nav-item" data-tab="threats">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
+          <span>Threats</span>
+          <span class="nav-badge" id="badge-threats">0</span>
+        </button>
+        <button class="nav-item" data-tab="assets">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z" /></svg>
+          <span>Attack Surface</span>
+        </button>
+        <button class="nav-item" data-tab="mitre">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+          <span>MITRE ATT&CK</span>
+        </button>
+        <button class="nav-item" data-tab="copilot">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+          <span>AI Copilot</span>
+        </button>
+        <button class="nav-item" data-tab="air">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+          <span>AIR Pipeline</span>
+        </button>
+        <button class="nav-item" data-tab="l1agent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2" /><circle cx="12" cy="5" r="2" /><path d="M12 7v4" /><line x1="8" y1="16" x2="8" y2="16" /><line x1="16" y1="16" x2="16" y2="16" /></svg>
+          <span>L1 Agent</span>
+          <span class="nav-badge" id="badge-l1">●</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="footer-stat">
+          <span class="footer-label">Worker</span>
+          <span class="footer-value" id="workerStatus">●</span>
+        </div>
+        <div class="footer-stat">
+          <span class="footer-label">Wazuh</span>
+          <span class="footer-value" id="wazuhStatus">●</span>
+        </div>
+        <div class="footer-stat">
+          <span class="footer-label">LLM</span>
+          <span class="footer-value" id="llmStatus">●</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============== MAIN ============== -->
+    <main class="main">
+      <!-- =========== OVERVIEW TAB =========== -->
+      <section class="tab active" data-tab="overview">
+        <!-- KPI strip -->
+        <div class="kpi-strip">
+          <div class="kpi-card sev-critical">
+            <div class="kpi-header">
+              <span class="kpi-label">Critical Alerts</span>
+              <span class="kpi-icon critical">!</span>
+            </div>
+            <div class="kpi-value" id="kpi-critical">0</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow up">▲</span>
+              <span id="kpi-critical-delta">+0 in last hour</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Open Incidents</span>
+              <span class="kpi-icon">⊙</span>
+            </div>
+            <div class="kpi-value" id="kpi-incidents">0</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow stable">—</span>
+              <span id="kpi-incidents-delta">0 open / 0 closed</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">MTTR</span>
+              <span class="kpi-icon">⏱</span>
+            </div>
+            <div class="kpi-value" id="kpi-mttr">—</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow down">▼</span>
+              <span id="kpi-mttr-delta">mean time to respond</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Auto-Containment</span>
+              <span class="kpi-icon">🛡</span>
+            </div>
+            <div class="kpi-value" id="kpi-contain">—</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow up">▲</span>
+              <span id="kpi-contain-delta">driverless rate</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">AI Confidence</span>
+              <span class="kpi-icon">⌬</span>
+            </div>
+            <div class="kpi-value" id="kpi-confidence">—</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow stable">●</span>
+              <span id="kpi-confidence-delta">multi-model avg</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Detection Coverage</span>
+              <span class="kpi-icon">⌑</span>
+            </div>
+            <div class="kpi-value" id="kpi-coverage">—</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow up">▲</span>
+              <span id="kpi-coverage-delta">active rules</span>
+            </div>
+          </div>
         </div>
 
-        <div id="main-content">
-            <!-- Dynamic Tab View Rendered by JS -->
+        <!-- Row 1: timeline + severity -->
+        <div class="grid-row">
+          <div class="card card-large">
+            <div class="card-header">
+              <h3 class="card-title">Alert Volume</h3>
+              <div class="card-actions">
+                <span class="legend"><span class="dot critical"></span>Critical</span>
+                <span class="legend"><span class="dot high"></span>High</span>
+                <span class="legend"><span class="dot medium"></span>Medium</span>
+                <span class="legend"><span class="dot low"></span>Low</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <svg id="chartTimeline" viewBox="0 0 800 240" preserveAspectRatio="none" class="chart"></svg>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Severity Distribution</h3>
+            </div>
+            <div class="card-body donut-body">
+              <svg id="chartSeverity" viewBox="0 0 200 200" class="chart-donut"></svg>
+              <div class="donut-legend" id="severityLegend"></div>
+            </div>
+          </div>
         </div>
+
+        <!-- Row 2: MITRE heatmap + top sources -->
+        <div class="grid-row">
+          <div class="card card-large">
+            <div class="card-header">
+              <h3 class="card-title">MITRE ATT&CK Heatmap</h3>
+              <span class="card-sub" id="mitreCount">0 techniques triggered</span>
+            </div>
+            <div class="card-body mitre-body" id="mitreHeatmap"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Top Attack Sources</h3>
+            </div>
+            <div class="card-body table-body">
+              <table class="data-table" id="topSourcesTable">
+                <thead><tr><th>#</th><th>Source IP</th><th class="num">Alerts</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: live alerts + active incidents -->
+        <div class="grid-row">
+          <div class="card card-large">
+            <div class="card-header">
+              <h3 class="card-title">Live Alert Feed</h3>
+              <span class="live-dot"></span>
+              <span class="card-sub" id="alertFeedCount">0 alerts</span>
+            </div>
+            <div class="card-body table-body">
+              <table class="data-table" id="alertFeedTable">
+                <thead><tr>
+                  <th>ID</th>
+                  <th>Severity</th>
+                  <th>Title</th>
+                  <th>Asset</th>
+                  <th>MITRE</th>
+                  <th>Status</th>
+                  <th>AI</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Active Incidents</h3>
+            </div>
+            <div class="card-body incident-list" id="incidentList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========== INCIDENTS TAB =========== -->
+      <section class="tab" data-tab="incidents">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Incident Management</h2>
+            <p class="page-sub">Full incident lifecycle with AI-driven investigation and closure</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary" id="btnTriggerSim">+ Simulate Attack</button>
+            <button class="btn btn-primary" id="btnRunPipeline">▶ Run AIR Pipeline</button>
+          </div>
+        </div>
+        <div class="grid-row">
+          <div class="card card-full">
+            <div class="card-header">
+              <h3 class="card-title">All Incidents</h3>
+            </div>
+            <div class="card-body table-body">
+              <table class="data-table" id="incidentsTable">
+                <thead><tr>
+                  <th>ID</th><th>Severity</th><th>Title</th><th>Status</th>
+                  <th>Source</th><th>MITRE</th><th>Evidence</th><th>Updated</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========== THREATS TAB =========== -->
+      <section class="tab" data-tab="threats">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Threat Explorer</h2>
+            <p class="page-sub">All security alerts with storyline forensics</p>
+          </div>
+          <div class="page-actions">
+            <input type="text" placeholder="Filter…" class="filter-input" id="threatFilter" />
+          </div>
+        </div>
+        <div class="grid-row">
+          <div class="card card-full">
+            <div class="card-body table-body">
+              <table class="data-table" id="threatsTable">
+                <thead><tr>
+                  <th>ID</th><th>Severity</th><th>Title</th><th>Endpoint</th>
+                  <th>Source IP</th><th>MITRE</th><th>Status</th><th>Confidence</th><th>Time</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========== ASSETS TAB =========== -->
+      <section class="tab" data-tab="assets">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Attack Surface Management</h2>
+            <p class="page-sub">External & internal asset inventory with risk scoring</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary" id="btnRescan">↻ Rescan All</button>
+          </div>
+        </div>
+        <div class="grid-row grid-3">
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Risk Score</h3></div>
+            <div class="card-body donut-body">
+              <svg id="chartAssetRisk" viewBox="0 0 200 200" class="chart-donut"></svg>
+              <div class="donut-legend" id="assetRiskLegend"></div>
+            </div>
+          </div>
+          <div class="card card-double">
+            <div class="card-header"><h3 class="card-title">Asset Inventory</h3></div>
+            <div class="card-body table-body">
+              <table class="data-table" id="assetsTable">
+                <thead><tr>
+                  <th>Asset</th><th>Type</th><th>IP / Endpoint</th>
+                  <th>Owner</th><th>Risk</th><th>Vulns</th><th>Status</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========== MITRE TAB =========== -->
+      <section class="tab" data-tab="mitre">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">MITRE ATT&CK Coverage</h2>
+            <p class="page-sub">Detection coverage across adversary tactics and techniques</p>
+          </div>
+        </div>
+        <div class="grid-row">
+          <div class="card card-full">
+            <div class="card-body mitre-body" id="mitreMatrixFull"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========== COPILOT TAB =========== -->
+      <section class="tab" data-tab="copilot">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">AI Security Copilot</h2>
+            <p class="page-sub">Natural-language security analyst powered by LLM</p>
+          </div>
+          <div class="page-actions">
+            <span class="llm-pill" id="llmPill">●</span>
+          </div>
+        </div>
+        <div class="grid-row">
+          <div class="card card-full copilot-shell">
+            <div class="card-body copilot-body">
+              <div class="chat-stream" id="chatStream">
+                <div class="chat-msg system">
+                  <div class="chat-avatar">⛨</div>
+                  <div class="chat-bubble">
+                    Hello, SOC Analyst. I'm BradlyAI Copilot. Ask me about active threats, asset risk, MITRE techniques, or request a threat-hunt summary.
+                  </div>
+                </div>
+              </div>
+              <div class="chat-quick">
+                <button class="quick-prompt" data-q="Summarize the top 3 active threats and recommend containment actions.">Summarize top threats</button>
+                <button class="quick-prompt" data-q="Which assets are most at risk right now and why?">Top risky assets</button>
+                <button class="quick-prompt" data-q="List the MITRE techniques observed in the last 24h with frequency.">MITRE frequency</button>
+                <button class="quick-prompt" data-q="Generate a hunt hypothesis based on current alert storyline data.">Hunt hypothesis</button>
+              </div>
+              <form class="chat-input" id="chatForm">
+                <input type="text" id="chatBox" placeholder="Ask the copilot…" autocomplete="off" />
+                <button type="submit" class="btn btn-primary">Send</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========== AIR PIPELINE TAB =========== -->
+      <section class="tab" data-tab="air">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Automated Incident Response (AIR)</h2>
+            <p class="page-sub">Driverless end-to-end response pipeline simulation</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary" data-scenario="0">▶ APT29 Lateral Movement</button>
+            <button class="btn btn-secondary" data-scenario="1">▶ Zero-Day Supply Chain</button>
+          </div>
+        </div>
+        <div class="grid-row">
+          <div class="card card-full">
+            <div class="card-header">
+              <h3 class="card-title">Pipeline Execution Log</h3>
+              <span class="card-sub" id="airStatus">Idle</span>
+            </div>
+            <div class="card-body">
+              <div class="air-stream" id="airStream">
+                <div class="air-empty">Click a scenario above to run the autonomous response pipeline.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========== L1 AGENT TAB =========== -->
+      <section class="tab" data-tab="l1agent">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">L1 SOC Agent</h2>
+            <p class="page-sub">Autonomously closes false positives and duplicate alerts</p>
+          </div>
+          <div class="page-actions">
+            <span class="mode-pill" id="l1ModePill">●</span>
+            <button class="btn btn-secondary" id="btnL1Toggle">⏸ Toggle Mode</button>
+            <button class="btn btn-primary" id="btnL1Test">🧪 Test Alert</button>
+          </div>
+        </div>
+
+        <!-- KPI strip -->
+        <div class="kpi-strip">
+          <div class="kpi-card sev-critical">
+            <div class="kpi-header">
+              <span class="kpi-label">Auto-Close Rate</span>
+              <span class="kpi-icon critical">⏱</span>
+            </div>
+            <div class="kpi-value" id="l1kpi-close-rate">—</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow up">▲</span>
+              <span id="l1kpi-close-rate-delta">of decisions auto-closed</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Decisions (24h)</span>
+              <span class="kpi-icon">⊙</span>
+            </div>
+            <div class="kpi-value" id="l1kpi-decisions">0</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow stable">—</span>
+              <span id="l1kpi-decisions-delta">total processed</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Avg Confidence</span>
+              <span class="kpi-icon">⌬</span>
+            </div>
+            <div class="kpi-value" id="l1kpi-confidence">—</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow stable">●</span>
+              <span id="l1kpi-confidence-delta">multi-signal avg</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Override Rate</span>
+              <span class="kpi-icon">↩</span>
+            </div>
+            <div class="kpi-value" id="l1kpi-override">—</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow down">▼</span>
+              <span id="l1kpi-override-delta">human disagreed with agent</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Whitelist Entries</span>
+              <span class="kpi-icon">⌑</span>
+            </div>
+            <div class="kpi-value" id="l1kpi-whitelist">0</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow up">▲</span>
+              <span id="l1kpi-whitelist-delta">active allow-list rules</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Threshold</span>
+              <span class="kpi-icon">⌖</span>
+            </div>
+            <div class="kpi-value" id="l1kpi-threshold">—</div>
+            <div class="kpi-delta">
+              <span class="delta-arrow stable">—</span>
+              <span id="l1kpi-threshold-delta">min confidence to auto-close</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 1: Mode controls + Test alert panel -->
+        <div class="grid-row">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Agent Mode</h3>
+              <span class="card-sub" id="l1ModeStatus">Loading…</span>
+            </div>
+            <div class="card-body">
+              <div class="l1-control-row">
+                <label class="l1-control-label">Mode</label>
+                <div class="l1-toggle-group" id="l1ModeToggle">
+                  <button class="l1-toggle-btn active" data-mode="active">🟢 Active (auto-close)</button>
+                  <button class="l1-toggle-btn" data-mode="shadow">👁 Shadow (decide only)</button>
+                </div>
+              </div>
+              <div class="l1-control-row">
+                <label class="l1-control-label">Confidence Threshold</label>
+                <div class="l1-slider-group">
+                  <input type="range" id="l1Threshold" min="0.5" max="0.99" step="0.01" value="0.85" class="l1-slider" />
+                  <span class="l1-slider-value" id="l1ThresholdValue">85%</span>
+                </div>
+                <p class="l1-help">Alerts with confidence ≥ threshold will be auto-closed. Below = escalated to L2.</p>
+              </div>
+              <div class="l1-control-row">
+                <label class="l1-control-label">Test Alert</label>
+                <div class="l1-test-buttons">
+                  <button class="l1-test-btn fp" data-test="nessus">🧪 Nessus scan (FP expected)</button>
+                  <button class="l1-test-btn fp" data-test="backup">🧪 Backup snapshot (FP expected)</button>
+                  <button class="l1-test-btn real" data-test="powershell">🧪 PowerShell attack (real expected)</button>
+                  <button class="l1-test-btn real" data-test="lsass">🧪 LSASS dump (real expected)</button>
+                </div>
+                <p class="l1-help">Sends a synthetic alert to test the agent's decision-making in real-time.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Primary Signal Breakdown (24h)</h3>
+              <span class="card-sub">which signal drove the most decisions</span>
+            </div>
+            <div class="card-body">
+              <div id="l1SignalBreakdown" class="l1-signal-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Recent decisions + Whitelist -->
+        <div class="grid-row">
+          <div class="card card-large">
+            <div class="card-header">
+              <h3 class="card-title">Recent Decisions</h3>
+              <span class="live-dot"></span>
+              <span class="card-sub" id="l1AuditCount">0 decisions</span>
+            </div>
+            <div class="card-body table-body">
+              <table class="data-table" id="l1DecisionsTable">
+                <thead><tr>
+                  <th>ID</th>
+                  <th>Time</th>
+                  <th>Decision</th>
+                  <th>Confidence</th>
+                  <th>Signal</th>
+                  <th>Reason</th>
+                  <th>Override</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Whitelist</h3>
+              <span class="card-sub" id="l1WhitelistCount">0 entries</span>
+            </div>
+            <div class="card-body">
+              <div class="l1-add-whitelist">
+                <input type="text" id="wlType" placeholder="Type (source_ip/user/process/domain)" class="l1-input-small" />
+                <input type="text" id="wlValue" placeholder="Value (e.g. 10.0.0.50)" class="l1-input" />
+                <input type="text" id="wlName" placeholder="Name (optional)" class="l1-input-small" />
+                <button class="btn btn-primary" id="btnAddWhitelist">+ Add</button>
+              </div>
+              <div class="l1-whitelist-list" id="l1WhitelistList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
+  </div>
 
-    <!-- Modals Overlay Container -->
-    <div class="modal-overlay" id="modal-overlay">
-        <div class="modal-card" id="modal-card">
-            <!-- Populated by JS -->
-        </div>
+  <!-- ============================== TOAST ============================== -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ============================== DETAIL MODAL ============================== -->
+  <div class="modal-backdrop" id="detailModal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Alert Detail</h3>
+        <button class="modal-close" id="modalClose">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
     </div>
+  </div>
 
-    <!-- Emergency Attack Simulation Modal Overlay -->
-    <div class="modal-overlay" id="sim-modal-overlay">
-    </div>
-
-    <!-- SOC Advanced System Settings Modal Overlay -->
-    <div class="modal-overlay" id="settings-modal-overlay">
-        <div class="modal-card" id="settings-modal-card">
-        </div>
-    </div>
-
-    <!-- App Data & Logic Scripts -->
-    <script src="data.js"></script>
-    <script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
