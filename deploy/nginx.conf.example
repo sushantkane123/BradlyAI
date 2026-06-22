@@ -1,0 +1,72 @@
+# ============================================================================
+# BradlyAI — Nginx reverse proxy + TLS termination (example)
+#
+# Place at:  /etc/nginx/sites-available/bradlyai.conf
+# Enable:    sudo ln -s /etc/nginx/sites-available/bradlyai.conf /etc/nginx/sites-enabled/
+# Test:      sudo nginx -t
+# Reload:    sudo systemctl reload nginx
+#
+# Requires:  BradlyAI running on 127.0.0.1:8000 (set by deploy/start.sh)
+#           Valid TLS certs at the paths below (use certbot for Let's Encrypt)
+# ============================================================================
+
+# ---- HTTP → HTTPS redirect ----
+server {
+    listen 80;
+    listen [::]:80;
+    server_name bradlyai.example.com;
+    return 301 https://$host$request_uri;
+}
+
+# ---- Main HTTPS server ----
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name bradlyai.example.com;
+
+    # ---- TLS (Let's Encrypt via certbot) ----
+    ssl_certificate     /etc/letsencrypt/live/bradlyai.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bradlyai.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    # ---- Security headers ----
+    add_header X-Frame-Options           "SAMEORIGIN"      always;
+    add_header X-Content-Type-Options    "nosniff"         always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # ---- Logging ----
+    access_log /var/log/nginx/bradlyai.access.log;
+    error_log  /var/log/nginx/bradlyai.error.log warn;
+
+    # ---- Body size ----
+    client_max_body_size 20M;
+
+    # ---- Proxy to FastAPI ----
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection        "";
+
+        # WebSocket support (for /api/v1/ws/stream)
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        "upgrade";
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # ---- Static assets: cache aggressively ----
+    location ~* \.(css|js|svg|png|jpg|jpeg|gif|ico|woff2?)$ {
+        proxy_pass http://127.0.0.1:8000;
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+    }
+}
