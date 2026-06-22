@@ -915,15 +915,16 @@
     // Mode + threshold
     try {
       const mode = await api('/api/v1/l1/mode');
-      $('#l1ModePill').textContent = mode.mode === 'active' ? '🟢 Active' : '👁 Shadow';
-      $('#l1ModePill').className = 'mode-pill ' + mode.mode;
-      $('#l1ModeStatus').textContent = `${mode.mode.toUpperCase()} mode · threshold ${(mode.threshold * 100).toFixed(0)}%`;
+      $('#l1ModeDisplay').value = mode.mode.toUpperCase() + ' mode';
+      $('#l1ModeStatus').textContent = `${mode.mode} · threshold ${(mode.threshold * 100).toFixed(0)}%`;
       $('#l1kpi-threshold').textContent = (mode.threshold * 100).toFixed(0) + '%';
-      $('#l1kpi-threshold-delta').textContent = mode.mode === 'active' ? 'auto-close enabled' : 'decide-only';
       $('#l1Threshold').value = mode.threshold;
       $('#l1ThresholdValue').textContent = (mode.threshold * 100).toFixed(0) + '%';
-      // Update toggle buttons
-      $$('.l1-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode.mode));
+      // Highlight active mode button
+      $('#btnL1ModeActive').classList.toggle('btn-primary', mode.mode === 'active');
+      $('#btnL1ModeActive').classList.toggle('btn-secondary', mode.mode !== 'active');
+      $('#btnL1ModeShadow').classList.toggle('btn-primary', mode.mode === 'shadow');
+      $('#btnL1ModeShadow').classList.toggle('btn-secondary', mode.mode !== 'shadow');
     } catch (e) { console.warn('L1 mode fetch failed', e); }
 
     // Stats
@@ -933,28 +934,25 @@
       $('#l1kpi-close-rate-delta').textContent = `${stats.closed} closed of ${stats.total_decisions}`;
       $('#l1kpi-decisions').textContent = fmt.num(stats.total_decisions);
       $('#l1kpi-decisions-delta').textContent = `${stats.escalated} escalated`;
-      $('#l1kpi-confidence').textContent = (stats.avg_close_confidence * 100).toFixed(0) + '%';
+      $('#l1kpi-confidence').textContent = stats.avg_close_confidence > 0 ? (stats.avg_close_confidence * 100).toFixed(0) + '%' : '—';
       $('#l1kpi-override').textContent = (stats.override_rate * 100).toFixed(1) + '%';
-      $('#l1kpi-override-delta').textContent = stats.overridden || 0 + ' human overrides';
-      // Update sidebar badge
+      $('#l1kpi-override-delta').textContent = 'human disagreed';
       $('#badge-l1').textContent = stats.total_decisions > 0 ? stats.total_decisions : '';
       $('#badge-l1').dataset.zero = stats.total_decisions === 0 ? 'true' : 'false';
 
-      // Signal breakdown bar chart
+      // Signal breakdown as table
       const sigs = stats.primary_signal_breakdown || {};
       const sigEntries = Object.entries(sigs);
       const sigTotal = sigEntries.reduce((s, [_, c]) => s + c, 0) || 1;
-      const html = sigEntries.length === 0
-        ? '<div class="l1-signal-empty">No decisions yet. Run a test alert below.</div>'
-        : sigEntries.map(([name, count]) => {
-            const pct = (count / sigTotal * 100).toFixed(0);
-            return `<div class="l1-signal-bar">
-              <div class="l1-signal-name">${name}</div>
-              <div class="l1-signal-track"><div class="l1-signal-fill" style="width:${pct}%"></div></div>
-              <div class="l1-signal-count">${count}</div>
-            </div>`;
-          }).join('');
-      $('#l1SignalBreakdown').innerHTML = html;
+      const sigBody = $('#l1SignalTable tbody');
+      if (!sigEntries.length) {
+        sigBody.innerHTML = '<tr><td colspan="3" class="incident-empty">No decisions yet</td></tr>';
+      } else {
+        sigBody.innerHTML = sigEntries.map(([name, count]) => {
+          const pct = (count / sigTotal * 100).toFixed(0);
+          return `<tr><td>${escapeHtml(name)}</td><td class="num-cell">${count}</td><td class="num-cell">${pct}%</td></tr>`;
+        }).join('');
+      }
     } catch (e) { console.warn('L1 stats fetch failed', e); }
 
     // Audit log
@@ -963,22 +961,21 @@
       $('#l1AuditCount').textContent = `${audit.count} decisions`;
       const tbody = $('#l1DecisionsTable tbody');
       if (!audit.entries.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="incident-empty">No decisions yet. Click "Test Alert" above.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="incident-empty">No decisions yet</td></tr>';
       } else {
         tbody.innerHTML = audit.entries.slice(0, 50).map(e => `
-          <tr data-audit-id="${e.id}">
+          <tr>
             <td class="mono">#${e.id}</td>
             <td class="mono">${e.timestamp ? e.timestamp.split('T')[1].split('.')[0] : '—'}</td>
-            <td><span class="decision-${e.decision}">${e.decision}</span></td>
+            <td><span class="pill ${e.decision === 'CLOSE' ? 'low' : e.decision === 'ESCALATE' ? 'medium' : 'info'}">${e.decision}</span></td>
             <td>
               <div class="conf-bar">
                 <div class="conf-bar-track"><div class="conf-bar-fill" style="width:${(e.confidence * 100).toFixed(0)}%"></div></div>
                 <span class="conf-bar-text">${(e.confidence * 100).toFixed(0)}%</span>
               </div>
             </td>
-            <td><span class="pill neutral">${e.primary_signal || '—'}</span></td>
+            <td class="mono">${e.primary_signal || '—'}</td>
             <td>${escapeHtml((e.reason || '').substring(0, 60))}${(e.reason || '').length > 60 ? '…' : ''}</td>
-            <td>${e.overridden_at ? '<span class="override-yes">yes</span>' : '<span class="override-no">—</span>'}</td>
           </tr>
         `).join('');
       }
@@ -989,37 +986,36 @@
       const wl = await api('/api/v1/l1/whitelist');
       $('#l1kpi-whitelist').textContent = wl.count;
       $('#l1WhitelistCount').textContent = `${wl.count} entries`;
-      const list = $('#l1WhitelistList');
+      const tbody = $('#l1WhitelistTable tbody');
       if (!wl.entries.length) {
-        list.innerHTML = '<div class="incident-empty">No whitelist entries</div>';
+        tbody.innerHTML = '<tr><td colspan="5" class="incident-empty">No whitelist entries</td></tr>';
       } else {
-        list.innerHTML = wl.entries.map(e => `
-          <div class="l1-whitelist-row ${e.enabled ? '' : 'disabled'}" data-wl-id="${e.id}">
-            <span class="l1-wl-type">${e.entry_type}</span>
-            <span class="l1-wl-value" title="${escapeHtml(e.match_value)}">${escapeHtml(e.match_value)}</span>
-            <span class="l1-wl-name">${escapeHtml(e.name || '')}</span>
-            <span class="l1-wl-actions">
-              <button class="l1-wl-btn toggle">${e.enabled ? 'Disable' : 'Enable'}</button>
-              <button class="l1-wl-btn del">Delete</button>
-            </span>
-          </div>
+        tbody.innerHTML = wl.entries.map(e => `
+          <tr data-wl-id="${e.id}">
+            <td>${e.entry_type}</td>
+            <td class="mono">${escapeHtml(e.match_value)}</td>
+            <td>${escapeHtml(e.name || '')}</td>
+            <td><span class="pill ${e.enabled ? 'low' : 'neutral'}">${e.enabled ? 'enabled' : 'disabled'}</span></td>
+            <td>
+              <button class="btn btn-secondary l1wl-toggle" style="padding:3px 8px;font-size:11px">${e.enabled ? 'Disable' : 'Enable'}</button>
+              <button class="btn btn-secondary l1wl-del" style="padding:3px 8px;font-size:11px">Del</button>
+            </td>
+          </tr>
         `).join('');
-        // Wire up whitelist action buttons
-        list.querySelectorAll('.l1-whitelist-row').forEach(row => {
+        tbody.querySelectorAll('tr[data-wl-id]').forEach(row => {
           const id = parseInt(row.dataset.wlId);
-          row.querySelector('.toggle').addEventListener('click', async () => {
-            const enabled = !row.classList.contains('disabled');
+          row.querySelector('.l1wl-toggle').addEventListener('click', async () => {
+            const enabled = row.querySelector('.pill').textContent.trim() === 'enabled';
             try {
               await api(`/api/v1/l1/whitelist/${id}/toggle`, { method: 'POST', body: JSON.stringify({ enabled: !enabled }) });
-              toast('Whitelist updated', `Entry ${enabled ? 'disabled' : 'enabled'}`, 'success');
+              toast('Updated', `Whitelist ${enabled ? 'disabled' : 'enabled'}`, 'success');
               renderL1();
             } catch (e) { toast('Error', e.message, 'error'); }
           });
-          row.querySelector('.del').addEventListener('click', async () => {
-            if (!confirm('Delete this whitelist entry?')) return;
+          row.querySelector('.l1wl-del').addEventListener('click', async () => {
             try {
               await api(`/api/v1/l1/whitelist/${id}`, { method: 'DELETE' });
-              toast('Deleted', `Whitelist entry ${id} removed`, 'success');
+              toast('Deleted', `Whitelist entry ${id}`, 'success');
               renderL1();
             } catch (e) { toast('Error', e.message, 'error'); }
           });
@@ -1030,97 +1026,66 @@
 
   const sendL1Test = async (testType) => {
     const tests = {
-      nessus: {
-        source: 'splunk',
-        payload: { sid: `test-${Date.now()}`, search_name: 'Nessus vulnerability scan completed',
-                    result: { host: 'srv' }, severity: 'high' },
-      },
-      backup: {
-        source: 'splunk',
-        payload: { sid: `test-${Date.now()}`, search_name: 'Backup snapshot started',
-                    result: { host: 'DB-SRV' }, severity: 'low' },
-      },
-      powershell: {
-        source: 'wazuh',
-        payload: { rule: { level: 12, description: 'Suspicious PowerShell execution detected', id: '100001' },
-                    agent: { name: 'WEB-SRV01', ip: '10.0.0.50' } },
-      },
-      lsass: {
-        source: 'wazuh',
-        payload: { rule: { level: 12, description: 'lsass memory dump attempt', id: '100002' },
-                    agent: { name: 'DEV-WIN-SRV09', ip: '10.0.0.5' } },
-      },
+      nessus: { source: 'splunk', payload: { sid: `t-${Date.now()}`, search_name: 'Nessus vulnerability scan completed', result: { host: 'srv' }, severity: 'high' } },
+      backup: { source: 'splunk', payload: { sid: `t-${Date.now()}`, search_name: 'Backup snapshot started', result: { host: 'DB-SRV' }, severity: 'low' } },
+      powershell: { source: 'wazuh', payload: { rule: { level: 12, description: 'Suspicious PowerShell execution detected', id: '100001' }, agent: { name: 'WEB-SRV01', ip: '10.0.0.50' } } },
+      lsass: { source: 'wazuh', payload: { rule: { level: 12, description: 'lsass memory dump attempt', id: '100002' }, agent: { name: 'DEV-WIN-SRV09', ip: '10.0.0.5' } } },
     };
     try {
       const resp = await api('/api/v1/l1/process-alert', { method: 'POST', body: JSON.stringify(tests[testType]) });
-      const closed = resp.applied?.alert_closed ? 'CLOSED ✓' : 'escalated to L2';
-      toast(
-        `${resp.decision} (${(resp.confidence * 100).toFixed(0)}%)`,
-        `${resp.alert_id}: ${closed}`,
-        resp.decision === 'CLOSE' ? 'success' : 'warn'
-      );
+      toast(`${resp.decision} (${(resp.confidence * 100).toFixed(0)}%)`, resp.alert_id, resp.decision === 'CLOSE' ? 'success' : 'warn');
       renderL1();
     } catch (e) { toast('Test failed', e.message, 'error'); }
   };
 
   const initL1 = () => {
-    // Mode toggle
-    $$('.l1-toggle-btn').forEach(b => b.addEventListener('click', async () => {
-      try {
-        await api('/api/v1/l1/mode', { method: 'POST', body: JSON.stringify({ mode: b.dataset.mode }) });
-        toast('Mode switched', `Now in ${b.dataset.mode.toUpperCase()} mode`, 'success');
-        renderL1();
-      } catch (e) { toast('Error', e.message, 'error'); }
-    }));
-    // Threshold slider
-    const slider = $('#l1Threshold');
-    slider.addEventListener('input', () => {
-      $('#l1ThresholdValue').textContent = (parseFloat(slider.value) * 100).toFixed(0) + '%';
+    $('#btnL1ModeActive')?.addEventListener('click', async () => {
+      try { await api('/api/v1/l1/mode', { method: 'POST', body: JSON.stringify({ mode: 'active' }) }); toast('Mode', 'Active', 'success'); renderL1(); }
+      catch (e) { toast('Error', e.message, 'error'); }
     });
-    slider.addEventListener('change', async () => {
+    $('#btnL1ModeShadow')?.addEventListener('click', async () => {
+      try { await api('/api/v1/l1/mode', { method: 'POST', body: JSON.stringify({ mode: 'shadow' }) }); toast('Mode', 'Shadow', 'warn'); renderL1(); }
+      catch (e) { toast('Error', e.message, 'error'); }
+    });
+    $('#btnL1SetThreshold')?.addEventListener('click', async () => {
+      const v = parseFloat($('#l1Threshold').value);
+      if (isNaN(v) || v < 0.5 || v > 0.99) { toast('Invalid', 'Threshold must be 0.5-0.99', 'warn'); return; }
       try {
-        await api('/api/v1/l1/mode', { method: 'POST', body: JSON.stringify({ mode: 'active', threshold: parseFloat(slider.value) }) });
-        toast('Threshold updated', `Now ${(parseFloat(slider.value) * 100).toFixed(0)}%`, 'success');
-        renderL1();
+        await api('/api/v1/l1/mode', { method: 'POST', body: JSON.stringify({ mode: 'active', threshold: v }) });
+        toast('Updated', `Threshold = ${(v*100).toFixed(0)}%`, 'success'); renderL1();
       } catch (e) { toast('Error', e.message, 'error'); }
     });
-    // Mode pill button
+    $('#l1Threshold')?.addEventListener('input', () => {
+      $('#l1ThresholdValue').textContent = (parseFloat($('#l1Threshold').value) * 100).toFixed(0) + '%';
+    });
     $('#btnL1Toggle')?.addEventListener('click', async () => {
       try {
         const cur = await api('/api/v1/l1/mode');
         const newMode = cur.mode === 'active' ? 'shadow' : 'active';
         await api('/api/v1/l1/mode', { method: 'POST', body: JSON.stringify({ mode: newMode }) });
-        toast('Mode toggled', `Now ${newMode.toUpperCase()}`, 'success');
-        renderL1();
+        toast('Toggled', `Now ${newMode}`, 'success'); renderL1();
       } catch (e) { toast('Error', e.message, 'error'); }
     });
-    // Test buttons
-    $$('.l1-test-btn').forEach(b => b.addEventListener('click', () => sendL1Test(b.dataset.test)));
+    $$('[data-test]').forEach(b => b.addEventListener('click', () => sendL1Test(b.dataset.test)));
     $('#btnL1Test')?.addEventListener('click', () => sendL1Test('nessus'));
-    // Add whitelist
     $('#btnAddWhitelist')?.addEventListener('click', async () => {
       const type = $('#wlType').value.trim();
       const value = $('#wlValue').value.trim();
       const name = $('#wlName').value.trim();
-      if (!type || !value) { toast('Missing fields', 'Type and Value are required', 'warn'); return; }
+      if (!type || !value) { toast('Missing', 'Type and Value required', 'warn'); return; }
       try {
         await api('/api/v1/l1/whitelist', { method: 'POST', body: JSON.stringify({ entry_type: type, match_value: value, name }) });
-        toast('Whitelist added', `${type}: ${value}`, 'success');
+        toast('Added', `${type}: ${value}`, 'success');
         $('#wlType').value = ''; $('#wlValue').value = ''; $('#wlName').value = '';
         renderL1();
       } catch (e) { toast('Error', e.message, 'error'); }
     });
-
-    // Render when tab becomes active
     $$('.nav-item').forEach(n => n.addEventListener('click', () => {
       if (n.dataset.tab === 'l1agent') setTimeout(renderL1, 50);
     }));
-
-    // Initial render if tab is active
     if ($('.nav-item[data-tab="l1agent"]')?.classList.contains('active')) renderL1();
   };
 
-  // Hook L1 init into existing init function
   const _origInit = init;
   init = function() { _origInit(); initL1(); setInterval(renderL1, 10000); };
 

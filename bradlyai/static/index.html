@@ -442,18 +442,18 @@
             <p class="page-sub">Autonomously closes false positives and duplicate alerts</p>
           </div>
           <div class="page-actions">
-            <span class="mode-pill" id="l1ModePill">●</span>
-            <button class="btn btn-secondary" id="btnL1Toggle">⏸ Toggle Mode</button>
-            <button class="btn btn-primary" id="btnL1Test">🧪 Test Alert</button>
+            <input type="text" placeholder="Mode" class="filter-input" id="l1ModeDisplay" style="width:120px" disabled />
+            <button class="btn btn-secondary" id="btnL1Toggle">Toggle Mode</button>
+            <button class="btn btn-primary" id="btnL1Test">Test Alert</button>
           </div>
         </div>
 
-        <!-- KPI strip -->
+        <!-- KPI strip using existing classes -->
         <div class="kpi-strip">
           <div class="kpi-card sev-critical">
             <div class="kpi-header">
               <span class="kpi-label">Auto-Close Rate</span>
-              <span class="kpi-icon critical">⏱</span>
+              <span class="kpi-icon critical">!</span>
             </div>
             <div class="kpi-value" id="l1kpi-close-rate">—</div>
             <div class="kpi-delta">
@@ -464,7 +464,7 @@
           <div class="kpi-card">
             <div class="kpi-header">
               <span class="kpi-label">Decisions (24h)</span>
-              <span class="kpi-icon">⊙</span>
+              <span class="kpi-icon">i</span>
             </div>
             <div class="kpi-value" id="l1kpi-decisions">0</div>
             <div class="kpi-delta">
@@ -475,29 +475,29 @@
           <div class="kpi-card">
             <div class="kpi-header">
               <span class="kpi-label">Avg Confidence</span>
-              <span class="kpi-icon">⌬</span>
+              <span class="kpi-icon">i</span>
             </div>
             <div class="kpi-value" id="l1kpi-confidence">—</div>
             <div class="kpi-delta">
-              <span class="delta-arrow stable">●</span>
+              <span class="delta-arrow stable">—</span>
               <span id="l1kpi-confidence-delta">multi-signal avg</span>
             </div>
           </div>
           <div class="kpi-card">
             <div class="kpi-header">
               <span class="kpi-label">Override Rate</span>
-              <span class="kpi-icon">↩</span>
+              <span class="kpi-icon">i</span>
             </div>
             <div class="kpi-value" id="l1kpi-override">—</div>
             <div class="kpi-delta">
               <span class="delta-arrow down">▼</span>
-              <span id="l1kpi-override-delta">human disagreed with agent</span>
+              <span id="l1kpi-override-delta">human disagreed</span>
             </div>
           </div>
           <div class="kpi-card">
             <div class="kpi-header">
               <span class="kpi-label">Whitelist Entries</span>
-              <span class="kpi-icon">⌑</span>
+              <span class="kpi-icon">i</span>
             </div>
             <div class="kpi-value" id="l1kpi-whitelist">0</div>
             <div class="kpi-delta">
@@ -508,49 +508,52 @@
           <div class="kpi-card">
             <div class="kpi-header">
               <span class="kpi-label">Threshold</span>
-              <span class="kpi-icon">⌖</span>
+              <span class="kpi-icon">i</span>
             </div>
             <div class="kpi-value" id="l1kpi-threshold">—</div>
             <div class="kpi-delta">
               <span class="delta-arrow stable">—</span>
-              <span id="l1kpi-threshold-delta">min confidence to auto-close</span>
+              <span id="l1kpi-threshold-delta">min confidence to close</span>
             </div>
           </div>
         </div>
 
-        <!-- Row 1: Mode controls + Test alert panel -->
+        <!-- Row 1: Mode controls + Signal breakdown -->
         <div class="grid-row">
           <div class="card">
             <div class="card-header">
-              <h3 class="card-title">Agent Mode</h3>
+              <h3 class="card-title">Agent Settings</h3>
               <span class="card-sub" id="l1ModeStatus">Loading…</span>
             </div>
             <div class="card-body">
-              <div class="l1-control-row">
-                <label class="l1-control-label">Mode</label>
-                <div class="l1-toggle-group" id="l1ModeToggle">
-                  <button class="l1-toggle-btn active" data-mode="active">🟢 Active (auto-close)</button>
-                  <button class="l1-toggle-btn" data-mode="shadow">👁 Shadow (decide only)</button>
-                </div>
-              </div>
-              <div class="l1-control-row">
-                <label class="l1-control-label">Confidence Threshold</label>
-                <div class="l1-slider-group">
-                  <input type="range" id="l1Threshold" min="0.5" max="0.99" step="0.01" value="0.85" class="l1-slider" />
-                  <span class="l1-slider-value" id="l1ThresholdValue">85%</span>
-                </div>
-                <p class="l1-help">Alerts with confidence ≥ threshold will be auto-closed. Below = escalated to L2.</p>
-              </div>
-              <div class="l1-control-row">
-                <label class="l1-control-label">Test Alert</label>
-                <div class="l1-test-buttons">
-                  <button class="l1-test-btn fp" data-test="nessus">🧪 Nessus scan (FP expected)</button>
-                  <button class="l1-test-btn fp" data-test="backup">🧪 Backup snapshot (FP expected)</button>
-                  <button class="l1-test-btn real" data-test="powershell">🧪 PowerShell attack (real expected)</button>
-                  <button class="l1-test-btn real" data-test="lsass">🧪 LSASS dump (real expected)</button>
-                </div>
-                <p class="l1-help">Sends a synthetic alert to test the agent's decision-making in real-time.</p>
-              </div>
+              <table class="data-table">
+                <tbody>
+                  <tr>
+                    <td style="width:160px"><strong>Mode</strong></td>
+                    <td>
+                      <button class="btn btn-secondary" data-mode="active" id="btnL1ModeActive">Active (auto-close)</button>
+                      <button class="btn btn-secondary" data-mode="shadow" id="btnL1ModeShadow">Shadow (decide only)</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>Threshold</strong></td>
+                    <td>
+                      <input type="number" id="l1Threshold" min="0.5" max="0.99" step="0.01" value="0.85" class="filter-input" style="width:80px" />
+                      <span id="l1ThresholdValue" class="mono">85%</span>
+                      <button class="btn btn-secondary" id="btnL1SetThreshold">Update</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>Test alert</strong></td>
+                    <td>
+                      <button class="btn btn-secondary" data-test="nessus">Nessus (FP)</button>
+                      <button class="btn btn-secondary" data-test="backup">Backup (FP)</button>
+                      <button class="btn btn-secondary" data-test="powershell">PowerShell (real)</button>
+                      <button class="btn btn-secondary" data-test="lsass">LSASS dump (real)</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
           <div class="card">
@@ -558,8 +561,11 @@
               <h3 class="card-title">Primary Signal Breakdown (24h)</h3>
               <span class="card-sub">which signal drove the most decisions</span>
             </div>
-            <div class="card-body">
-              <div id="l1SignalBreakdown" class="l1-signal-grid"></div>
+            <div class="card-body table-body">
+              <table class="data-table" id="l1SignalTable">
+                <thead><tr><th>Signal</th><th class="num">Count</th><th class="num">%</th></tr></thead>
+                <tbody></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -581,7 +587,6 @@
                   <th>Confidence</th>
                   <th>Signal</th>
                   <th>Reason</th>
-                  <th>Override</th>
                 </tr></thead>
                 <tbody></tbody>
               </table>
@@ -593,13 +598,20 @@
               <span class="card-sub" id="l1WhitelistCount">0 entries</span>
             </div>
             <div class="card-body">
-              <div class="l1-add-whitelist">
-                <input type="text" id="wlType" placeholder="Type (source_ip/user/process/domain)" class="l1-input-small" />
-                <input type="text" id="wlValue" placeholder="Value (e.g. 10.0.0.50)" class="l1-input" />
-                <input type="text" id="wlName" placeholder="Name (optional)" class="l1-input-small" />
-                <button class="btn btn-primary" id="btnAddWhitelist">+ Add</button>
-              </div>
-              <div class="l1-whitelist-list" id="l1WhitelistList"></div>
+              <table class="data-table" style="margin-bottom:10px">
+                <tbody>
+                  <tr>
+                    <td><input type="text" id="wlType" placeholder="type (source_ip/user/process)" class="filter-input" style="width:140px" /></td>
+                    <td><input type="text" id="wlValue" placeholder="value" class="filter-input" style="width:160px" /></td>
+                    <td><input type="text" id="wlName" placeholder="name" class="filter-input" style="width:120px" /></td>
+                    <td><button class="btn btn-primary" id="btnAddWhitelist">Add</button></td>
+                  </tr>
+                </tbody>
+              </table>
+              <table class="data-table" id="l1WhitelistTable">
+                <thead><tr><th>Type</th><th>Value</th><th>Name</th><th>Status</th><th></th></tr></thead>
+                <tbody></tbody>
+              </table>
             </div>
           </div>
         </div>
