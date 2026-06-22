@@ -1,0 +1,44 @@
+# ============================================================================
+# BradlyAI — systemd service unit
+# Install:   sudo cp deploy/bradlyai.service /etc/systemd/system/
+#           sudo systemctl daemon-reload
+#           sudo systemctl enable --now bradlyai
+# Logs:      sudo journalctl -u bradlyai -f
+# Status:    sudo systemctl status bradlyai
+# Stop:      sudo systemctl stop bradlyai
+# ============================================================================
+[Unit]
+Description=BradlyAI Driverless SOC & Incident Response Platform
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bradlyai
+Group=bradlyai
+WorkingDirectory=/opt/bradlyai
+Environment="PATH=/opt/bradlyai/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="ENVIRONMENT=production"
+Environment="HOST=0.0.0.0"
+Environment="PORT=8000"
+EnvironmentFile=-/opt/bradlyai/.env
+ExecStart=/opt/bradlyai/venv/bin/python /opt/bradlyai/run.py --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Hardening (optional but recommended)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/bradlyai/data /opt/bradlyai/logs
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

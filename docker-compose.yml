@@ -1,21 +1,59 @@
-version: '3.8'
+# BradlyAI — Production docker-compose
+# Single-container deployment with persistent SQLite volume.
 
 services:
-  bradlyai-backend:
+  bradlyai:
     build: .
-    container_name: cycraft_driverless_soc
+    image: bradlyai/soc:latest
+    container_name: bradlyai_soc
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - APP_NAME=BradlyAI
-      - ENVIRONMENT=production
-      - LOG_LEVEL=info
-      - HOST=0.0.0.0
-      - PORT=8000
+      # Runtime config (override via .env file or -e flags)
+      APP_NAME: "BradlyAI - Driverless SOC"
+      APP_VERSION: "2.1.0-PRO"
+      ENVIRONMENT: production
+      LOG_LEVEL: info
+      HOST: 0.0.0.0
+      PORT: 8000
+      # AI providers — set your keys here or via .env
+      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # SOC tuning
+      AUTO_CONTAINMENT_THRESHOLD: "0.85"
+      LIVE_SIMULATION_WORKER_ACTIVE: "true"
+      SIMULATION_INTERVAL_SECONDS: "30"
     volumes:
-      - cycraft_db:/app/data
-    restart: unless-stopped
+      # Persistent SQLite database + log files
+      - bradlyai_data:/app/data
+      - bradlyai_logs:/app/logs
+      # Optional: mount your own .env file
+      - ./.env:/app/.env:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bradlyai_net
+    # Resource limits (adjust for your host)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+networks:
+  bradlyai_net:
+    name: bradlyai_net
+    driver: bridge
 
 volumes:
-  cycraft_db:
-    name: cycraft_db_volume
+  bradlyai_data:
+    name: bradlyai_data
+  bradlyai_logs:
+    name: bradlyai_logs
