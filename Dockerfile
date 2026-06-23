@@ -27,4 +27,5 @@ COPY . .
 EXPOSE 8000
 
 # Command to run the application
-CMD ["uvicorn", "cycraft.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "bradlyai.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
