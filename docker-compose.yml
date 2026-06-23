@@ -17,5 +17,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  cycraft_db:
-    name: cycraft_db_volume
+  bradlyai_db:
+    name: bradlyai_db_volume
