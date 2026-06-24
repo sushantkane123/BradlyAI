@@ -1,21 +1,49 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bradlyai_postgres
+    environment:
+      POSTGRES_USER: bradlyai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bradlyai}
+      POSTGRES_DB: bradlyai
+    volumes:
+      - bradlyai_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bradlyai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   bradlyai-backend:
     build: .
     container_name: bradlyai_soc
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
-      - APP_NAME=BradlyAI
-      - ENVIRONMENT=production
-      - LOG_LEVEL=info
-      - HOST=0.0.0.0
-      - PORT=8000
+      APP_NAME: BradlyAI
+      ENVIRONMENT: production
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://bradlyai:${POSTGRES_PASSWORD:-bradlyai}@postgres:5432/bradlyai
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-please-change-me-in-prod}
     volumes:
-      - bradlyai_db:/app/data
+      - bradlyai_data:/app/data
+      - ./sigma_rules:/app/sigma_rules:ro
+      - ./playbooks:/app/playbooks:ro
     restart: unless-stopped
 
 volumes:
   bradlyai_db:
     name: bradlyai_db_volume
+  bradlyai_pgdata:
+    name: bradlyai_pgdata
+  bradlyai_data:
+    name: bradlyai_data

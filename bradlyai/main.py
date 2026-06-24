@@ -15,7 +15,13 @@ from bradlyai.config import settings
 from bradlyai.database import engine, Base, SessionLocal
 from bradlyai.models.alert import AlertModel, AlertStorylineModel
 from bradlyai.models.asset import AssetModel, AssetFindingModel
-from bradlyai.routers import alerts, asm, air, forensics, mitre, chat, ws, system, ingest, integration, l1_agent
+from bradlyai.routers import (
+    alerts, asm, air, forensics, mitre, chat, ws, system, ingest,
+    integration, l1_agent,
+    # NEW competitive-hardening routers
+    auth, notifications, edr, network, identity, itsm,
+    threatintel, sigma, cases, playbooks, reports, metrics,
+)
 from bradlyai.services.live_simulation_worker import live_worker
 
 logging.basicConfig(
@@ -30,7 +36,7 @@ def seed_database():
     db = SessionLocal()
     try:
         if db.query(AlertModel).count() == 0:
-            logger.info("🌱 Seeding default BradlyAI security alerts to SQLite database...")
+            logger.info("🌱 Seeding default BradlyAI security alerts to database...")
             default_alerts = [
                 {"id": "ALT-8921", "severity": "CRITICAL", "title": "Suspicious Powershell Execution & Registry Modification",
                  "endpoint": "DEV-WIN-SRV09", "ip": "192.168.10.45", "timestamp": "2 mins ago",
@@ -74,7 +80,7 @@ def seed_database():
                 db.add(db_alt)
 
         if db.query(AssetModel).count() == 0:
-            logger.info("🌱 Seeding default ASM assets to SQLite database...")
+            logger.info("🌱 Seeding default ASM assets...")
             default_assets = [
                 {"name": "core-auth-api.bradlyai.internal", "type": "Web Service", "ip": "192.168.1.10",
                  "owner": "DevOps Team", "risk_score": "Low (12)", "vulnerabilities": 0, "status": "Secure",
@@ -114,13 +120,21 @@ seed_database()
 async def lifespan(app: FastAPI):
     if settings.LIVE_SIMULATION_WORKER_ACTIVE:
         live_worker.start(ws_manager=ws.manager, interval=settings.SIMULATION_INTERVAL_SECONDS)
-    # Seed default L1 Agent whitelist on startup
+
+    # Seed defaults — idempotent
     try:
-        from bradlyai.services.whitelist import seed_defaults
-        seed_defaults()
+        from bradlyai.services.whitelist import seed_defaults as seed_whitelist
+        seed_whitelist()
     except Exception as e:
         logger.warning(f"Could not seed L1 Agent whitelist: {e}")
-    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} started — Env: {settings.ENVIRONMENT} | L1 Agent: ready")
+    try:
+        from bradlyai.services.bootstrap import run_all as run_bootstrap
+        from bradlyai.database import SessionLocal
+        run_bootstrap(SessionLocal())
+    except Exception as e:
+        logger.warning(f"Could not seed defaults: {e}")
+
+    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} started — Env: {settings.ENVIRONMENT}")
     yield
     live_worker.stop()
     logger.info("🛑 BradlyAI shut down gracefully.")
@@ -131,6 +145,11 @@ app = FastAPI(
     description="BradlyAI multi-model machine learning mesh backend API providing automated incident response and a true Driverless SOC experience.",
     docs_url="/docs", redoc_url="/redoc", lifespan=lifespan,
 )
+
+
+# ── Observability ───────────────────────────────────────────────────────
+from bradlyai.services.metrics import install_otel_if_configured
+install_otel_if_configured(app)
 
 
 @app.middleware("http")
@@ -160,9 +179,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     })
 
 
-app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ALLOWED_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ALLOWED_ORIGINS, allow_credentials=True,
+                   allow_methods=["*"], allow_headers=["*"])
 
 api_prefix = "/api/v1"
+
+# Original routers
 app.include_router(alerts.router, prefix=api_prefix)
 app.include_router(asm.router, prefix=api_prefix)
 app.include_router(air.router, prefix=api_prefix)
@@ -174,6 +196,20 @@ app.include_router(integration.router, prefix=api_prefix)
 app.include_router(ws.router, prefix=api_prefix)
 app.include_router(system.router, prefix=api_prefix)
 app.include_router(l1_agent.router, prefix=api_prefix)
+
+# NEW competitive-hardening routers
+app.include_router(auth.router, prefix=api_prefix)
+app.include_router(notifications.router, prefix=api_prefix)
+app.include_router(edr.router, prefix=api_prefix)
+app.include_router(network.router, prefix=api_prefix)
+app.include_router(identity.router, prefix=api_prefix)
+app.include_router(itsm.router, prefix=api_prefix)
+app.include_router(threatintel.router, prefix=api_prefix)
+app.include_router(sigma.router, prefix=api_prefix)
+app.include_router(cases.router, prefix=api_prefix)
+app.include_router(playbooks.router, prefix=api_prefix)
+app.include_router(reports.router, prefix=api_prefix)
+app.include_router(metrics.router)
 
 
 @app.get("/health", tags=["Health"])
@@ -192,6 +228,7 @@ def health_check():
         "app": settings.APP_NAME, "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT, "database": "connected" if db_ok else "disconnected",
         "worker_active": live_worker.is_running,
+        "auth_enabled": settings.AUTH_ENABLED,
         "uptime": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
     }
 
