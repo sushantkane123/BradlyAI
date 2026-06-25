@@ -6,7 +6,9 @@ remains production-safe out of the box. Integrations must be explicitly
 enabled by setting the relevant _ENABLED flag and supplying credentials.
 """
 import os
+import secrets
 from typing import List, Optional
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,7 +49,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
     # ── CORS ───────────────────────────────────────────────────────────
-    CORS_ALLOWED_ORIGINS: List[str] = ["*"]
+    CORS_ALLOWED_ORIGINS: List[str] = ["http://localhost:8000", "http://127.0.0.1:8000"]
 
     # ── Wazuh Manager API Integration ───────────────────────────────────
     WAZUH_ENABLED: bool = False
@@ -62,7 +64,15 @@ class Settings(BaseSettings):
     # ── Authentication / Authorization / SSO (NEW) ─────────────────────
     # ══════════════════════════════════════════════════════════════════
     AUTH_ENABLED: bool = True
-    AUTH_JWT_SECRET: str = os.getenv("AUTH_JWT_SECRET", "CHANGE-ME-IN-PROD-" + os.urandom(8).hex())
+    # In dev: fallback to stable test secret. In prod: MUST set AUTH_JWT_SECRET env.
+    # Previously: os.urandom() at import → rotated every process → all tokens invalid.
+    AUTH_JWT_SECRET: str = Field(
+        default_factory=lambda: os.getenv(
+            "AUTH_JWT_SECRET",
+            # stable dev default — change in prod!
+            "dev-only-change-me-" + "0"*32
+        )
+    )
     AUTH_JWT_ALGORITHM: str = "HS256"
     AUTH_JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     AUTH_JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 14
@@ -285,6 +295,20 @@ class Settings(BaseSettings):
     OTEL_ENABLED: bool = False
     OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
     OTEL_SERVICE_NAME: str = "bradlyai"
+
+    # ── Validators ─────────────────────────────────────────────────────
+    @model_validator(mode="after")
+    def _validate_prod_secrets(self):
+        # Fail fast in production if JWT secret is still the dev default
+        if self.ENVIRONMENT.lower() == "production":
+            secret = self.AUTH_JWT_SECRET or ""
+            bad_markers = ("change-me", "dev-only", "000000", "test-secret")
+            if len(secret) < 32 or any(m in secret.lower() for m in bad_markers):
+                raise ValueError(
+                    "AUTH_JWT_SECRET must be set to a strong random value in production. "
+                    "Generate with: openssl rand -hex 32"
+                )
+        return self
 
 
 settings = Settings()

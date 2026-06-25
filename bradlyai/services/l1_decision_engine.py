@@ -47,7 +47,14 @@ class Decision:
 class L1DecisionEngine:
     """Combines 5 weighted signals into a final CLOSE/ESCALATE decision."""
 
-    def __init__(self, close_threshold: float = 0.85):
+    def __init__(self, close_threshold: float = None):
+        # Load threshold from settings by default — keeps config single-source
+        if close_threshold is None:
+            try:
+                from bradlyai.config import settings
+                close_threshold = settings.AUTO_CONTAINMENT_THRESHOLD
+            except Exception:
+                close_threshold = 0.85
         self.close_threshold = close_threshold
 
     def set_threshold(self, threshold: float):
@@ -162,6 +169,15 @@ class L1DecisionEngine:
             verdict = "ESCALATE"
             primary = signals[0] if signals else None
 
+        # ── Enforce configurable close threshold ──
+        # Previously threshold was stored but never checked → FP_score > REAL_score always closed.
+        # Now: CLOSE only if confidence >= close_threshold, else escalate conservatively.
+        threshold_failed = False
+        if verdict == "CLOSE" and confidence < self.close_threshold:
+            threshold_failed = True
+            verdict = "ESCALATE"
+            # keep primary as-is for audit trail, but note threshold block in reason
+
         if mode == "shadow" and verdict == "CLOSE":
             decision_str = "SHADOW_CLOSE"
         else:
@@ -169,8 +185,9 @@ class L1DecisionEngine:
 
         primary_name = primary.name if primary else "none"
         primary_reason = primary.reason if primary else "no signals"
+        threshold_note = f" [threshold {self.close_threshold:.0%} not met]" if threshold_failed else ""
         reason = (
-            f"{verdict} ({confidence:.0%}) — {primary_name}: {primary_reason} "
+            f"{verdict} ({confidence:.0%}) — {primary_name}: {primary_reason}{threshold_note} "
             f"[{', '.join(f'{s.name}={s.verdict}@{s.confidence:.0%}' for s in signals)}]"
         )
 

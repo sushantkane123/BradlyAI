@@ -25,13 +25,23 @@ class LLMClient:
 
     async def _call_groq(self, prompt: str, system_prompt: str) -> str:
         import httpx
+        # Use settings.DEFAULT_AI_MODEL if it looks like a Groq model, else fall back
+        # to current Groq models (llama3-70b-8192 is deprecated → llama-3.3-70b-versatile)
+        model = settings.DEFAULT_AI_MODEL if "llama" in settings.DEFAULT_AI_MODEL.lower() or "mixtral" in settings.DEFAULT_AI_MODEL.lower() or "gemma" in settings.DEFAULT_AI_MODEL.lower() else "llama-3.3-70b-versatile"
+        # Map deprecated model names
+        deprecated_map = {
+            "llama3-70b-8192": "llama-3.3-70b-versatile",
+            "mixtral-8x7b-32768": "mixtral-8x7b-32768",
+            "gpt-4-turbo-preview": "llama-3.3-70b-versatile",
+        }
+        model = deprecated_map.get(model, model)
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                json={"model": "llama3-70b-8192", "messages": [
+                json={"model": model, "messages": [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}], "temperature": 0.2},
+                    {"role": "user", "content": prompt}], "temperature": 0.2, "max_tokens": 1024},
             )
             response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"]

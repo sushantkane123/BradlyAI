@@ -94,37 +94,10 @@ class ApiKeyCreateResponse(BaseModel):
     expires_at: Optional[datetime.datetime]
 
 
-# ── Default seeding on first boot ──────────────────────────────────────
-@router.on_event("startup")
-async def _seed_defaults():
-    from bradlyai.database import SessionLocal
-    db = SessionLocal()
-    try:
-        seed_default_tenant(db)
-        seed_default_roles(db)
-        # Bootstrap admin user if no users exist
-        if db.query(UserModel).count() == 0:
-            admin = UserModel(
-                id=f"usr_{secrets.token_hex(6)}",
-                username="admin",
-                email="admin@bradlyai.local",
-                full_name="Default Admin",
-                password_hash=hash_password("Admin123!ChangeMe"),
-                is_active=True, is_admin=True,
-                tenant_id=settings.DEFAULT_TENANT_ID,
-            )
-            db.add(admin)
-            admin_role = db.query(RoleModel).filter(RoleModel.name == "admin").first()
-            if admin_role:
-                db.add(UserRoleModel(user_id=admin.id, role_id=admin_role.id,
-                                     tenant_id=settings.DEFAULT_TENANT_ID, granted_by="bootstrap"))
-            db.commit()
-            logger.warning("Bootstrap admin user created: admin / Admin123!ChangeMe — CHANGE THIS PASSWORD.")
-    finally:
-        db.close()
-
-
 # ── Login / Token endpoints ────────────────────────────────────────────
+# NOTE: Bootstrap seeding moved to bradlyai.services.bootstrap.run_all()
+# which is called from main.py lifespan (idempotent). Removed duplicate
+# @router.on_event("startup") to avoid double-seed + deprecation warning.
 @router.post("/login", response_model=TokenResponse)
 def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     user = authenticate_user(db, req.username, req.password, req.mfa_code)

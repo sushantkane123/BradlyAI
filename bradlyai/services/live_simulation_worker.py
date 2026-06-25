@@ -6,10 +6,13 @@ Continuously ingests realistic enterprise logs, runs multi-model anomaly detecti
 import asyncio
 import random
 import datetime
+import logging
 from sqlalchemy.orm import Session
 from bradlyai.database import SessionLocal
 from bradlyai.models.alert import AlertModel, AlertStorylineModel
 from bradlyai.services.ai_engine import ai_engine
+
+logger = logging.getLogger("bradlyai.live_worker")
 
 class LiveSimulationWorker:
     def __init__(self):
@@ -20,14 +23,14 @@ class LiveSimulationWorker:
         if not self.is_running:
             self.is_running = True
             self.task = asyncio.create_task(self._worker_loop(ws_manager, interval))
-            print(f"⚡ BradlyAI Live Continuous Telemetry Simulation Worker started (Interval: {interval}s).")
+            logger.info(f"⚡ BradlyAI Live Continuous Telemetry Simulation Worker started (Interval: {interval}s).")
 
     def stop(self):
         if self.is_running:
             self.is_running = False
             if self.task:
                 self.task.cancel()
-            print("🛑 BradlyAI Live Telemetry Worker stopped.")
+            logger.info("🛑 BradlyAI Live Telemetry Worker stopped.")
 
     async def _worker_loop(self, ws_manager, interval):
         endpoints = [
@@ -69,7 +72,7 @@ class LiveSimulationWorker:
                     db.add(db_alert)
                     db.commit()
                 except Exception as e:
-                    print(f"Error persisting simulated alert: {e}")
+                    logger.error(f"Error persisting simulated alert: {e}", exc_info=True)
                 finally:
                     db.close()
 
@@ -88,7 +91,7 @@ class LiveSimulationWorker:
             except asyncio.CancelledError:
                 break
             except Exception as err:
-                print(f"Live Simulation Worker Error: {err}")
+                logger.error(f"Live Simulation Worker Error: {err}", exc_info=True)
                 await asyncio.sleep(5)
 
 live_worker = LiveSimulationWorker()
