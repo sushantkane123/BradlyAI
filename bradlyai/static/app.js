@@ -160,7 +160,10 @@ class CyCraftApp {
 
         this.ws.onopen = () => {
             console.log("⚡ BradlyAI Live Driverless WebSockets Channel Active.");
-            document.querySelector('.driverless-badge').innerHTML = `<span class="status-dot"></span> 100% Autonomous Mesh`;
+            const badge = document.querySelector('.driverless-badge');
+            if (badge) {
+                badge.innerHTML = `<span class="status-dot"></span> 100% Autonomous Mesh`;
+            }
         };
 
         this.ws.onmessage = (e) => {
