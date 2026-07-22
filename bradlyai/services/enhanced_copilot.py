@@ -45,11 +45,6 @@ class RealWorldCyberCopilot:
                 logger.warning(f"LLM failed, offline: {e}")
         return self.get_reply(query)
 
-    async def get_reply_stream(self, query: str):
-        reply = await self.get_reply_async(query)
-        for word in reply.split(" "):
-            await asyncio.sleep(0.01)
-            yield word + " "
 
 
 real_copilot = RealWorldCyberCopilot()

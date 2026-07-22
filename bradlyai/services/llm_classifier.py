@@ -79,7 +79,6 @@ Analyze the behavior and respond with JSON matching the required schema."""
 
         try:
             # Force JSON Mode at API Gateway if supported by client, else standard call
-            # (If your llm_client doesn't accept extra kwargs, keep it standard)
             try:
                 raw = await llm_client.generate_response(
                     user_prompt, 
@@ -134,3 +133,6 @@ Analyze the behavior and respond with JSON matching the required schema."""
                 pass
 
         return None
+
+# Instantiated singleton (must be named llm_classifier for backwards compatibility)
+llm_classifier = LLMClassifierOptimized()

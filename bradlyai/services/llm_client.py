@@ -84,5 +84,5 @@ class LLMClientOptimized:
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
 
-# Global singleton
-llm_client_optimized = LLMClientOptimized()
+# Global singleton (must be named llm_client for backwards compatibility)
+llm_client = LLMClientOptimized()

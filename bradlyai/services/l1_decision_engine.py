@@ -187,3 +187,6 @@ class L1DecisionEngineOptimized:
             mode=mode,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
+
+# Instantiated singleton (must be named l1_engine for backwards compatibility)
+l1_engine = L1DecisionEngineOptimized()

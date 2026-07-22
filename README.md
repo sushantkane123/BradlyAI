@@ -259,7 +259,6 @@ Plus the original BradlyAI endpoints (alerts, incidents, copilot, MITRE, AIR, et
 │   │   ├── detection_engine.py       # 6 regex rules
 │   │   ├── ai_engine.py              # AI analysis
 │   │   ├── llm_client.py             # Groq/OpenAI async client
-│   │   ├── copilot.py                # AI Copilot
 │   │   ├── enhanced_copilot.py
 │   │   ├── live_simulation_worker.py # Demo data generator
 │   │   ├── log_ingestion.py

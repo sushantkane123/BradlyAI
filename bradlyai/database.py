@@ -10,21 +10,19 @@ Gains:
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.pool import QueuePool, StaticPool
+from sqlalchemy.pool import QueuePool
 from bradlyai.config import settings
 
 Base = declarative_base()
 
 def _build_connect_args() -> dict:
     if "sqlite" in settings.DATABASE_URL:
-        # Allow multiple concurrent threads to read/write with timeout safeguards
-        return {"timeout": 30}
+        # SQLite-specific connection arguments (must be nested in connect_args)
+        return {"connect_args": {"timeout": 30}}
     return {}
 
 def _build_pool_args() -> dict:
     if "sqlite" in settings.DATABASE_URL:
-        # SQLite operates best with a StaticPool in memory, or normal defaults in file-mode.
-        # But to prevent multithread locking, we configure timeout in connect_args.
         return {}
     return {
         "poolclass": QueuePool,
