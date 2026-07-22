@@ -16,6 +16,7 @@ from bradlyai.database import engine, Base, SessionLocal
 from bradlyai.models.alert import AlertModel, AlertStorylineModel
 from bradlyai.models.asset import AssetModel, AssetFindingModel
 from bradlyai.routers import (
+    remediation,
     alerts, asm, air, forensics, mitre, chat, ws, system, ingest,
     integration, l1_agent,
     # NEW competitive-hardening routers
@@ -195,6 +196,7 @@ app.include_router(ingest.router, prefix=api_prefix)
 app.include_router(integration.router, prefix=api_prefix)
 app.include_router(ws.router, prefix=api_prefix)
 app.include_router(system.router, prefix=api_prefix)
+app.include_router(remediation.router, prefix=api_prefix)
 app.include_router(l1_agent.router, prefix=api_prefix)
 
 # NEW competitive-hardening routers

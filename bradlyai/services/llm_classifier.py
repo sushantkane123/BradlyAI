@@ -2,6 +2,7 @@
 
 Gains:
 - Prompt Injection Shielding: Dynamic alert content is encapsulated inside secure structural XML tags.
+- Security Guardrails: Uses bradlyai.services.guardrails to detect injection attacks and fail-safe immediately.
 - strict System Directive: Commands or formatting overrides inside XML blocks are ignored.
 - Deterministic JSON Enforcement: Uses JSON-mode if available, eliminating markdown wrapping parsing errors.
 """
@@ -12,6 +13,7 @@ import re
 from typing import Optional
 from bradlyai.services.fp_detector import Signal
 from bradlyai.services.llm_client import llm_client
+from bradlyai.services.guardrails import guardrails
 
 logger = logging.getLogger("bradlyai.llm_classifier_optimized")
 
@@ -63,11 +65,25 @@ class LLMClassifierOptimized:
                 evidence={"available": False},
             )
 
+        title = getattr(alert, "title", "unknown")
+        description = getattr(alert, "description", "no description available")
+
+        # 1. Run Pre-Execution Input Safety Guardrails
+        if not guardrails.is_safe(title) or not guardrails.is_safe(description):
+            return Signal(
+                name="llm_classifier",
+                verdict="REAL",
+                confidence=0.95,
+                weight=self.weight,
+                reason="Security Interceptor Block: Telemetry contains potential LLM prompt injection patterns.",
+                evidence={"guardrail_blocked": True, "input_compromised": True},
+            )
+
         # Secure XML Variable Encapsulation to isolate user inputs
         user_prompt = f"""Classify the following security alert metadata:
 
-<alert_title>{getattr(alert, "title", "unknown")}</alert_title>
-<alert_description>{getattr(alert, "description", "no description available")}</alert_description>
+<alert_title>{title}</alert_title>
+<alert_description>{description}</alert_description>
 <alert_severity>{getattr(alert, "severity", "UNKNOWN")}</alert_severity>
 <alert_source>{getattr(alert, "source", "unknown")}</alert_source>
 <alert_asset>{getattr(alert, "asset", "unknown")}</alert_asset>

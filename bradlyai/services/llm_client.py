@@ -1,8 +1,10 @@
-"""Optimized BradlyAI Unified LLM Client — shared persistent connection pooling.
+"""Optimized BradlyAI Unified LLM Client — shared persistent connection pooling & Ollama local-first.
 
 Gains:
 - Persistent TCP Connection Pooling: Instantiates a single, shared httpx.AsyncClient 
   reused across all requests, eliminating DNS, TCP, and TLS handshake latency overhead.
+- Ollama Local-First Integration: Native support for Ollama local servers allowing complete
+  air-gapped and local-first LLM security analysis.
 - Graceful Connection Lifecycle: Supports manual client closure and custom session timeouts.
 """
 
@@ -30,13 +32,16 @@ class LLMClientOptimized:
         logger.info("LLM Client connection pool closed.")
 
     async def generate_response(self, prompt: str, system_prompt: str = "You are a professional SOC Analyst.") -> str:
-        if not self.api_key:
+        # Ollama local provider operates completely without external cloud API Keys
+        if self.provider != "ollama" and not self.api_key:
             return "No API key configured. Add GROQ_API_KEY or OPENAI_API_KEY to your .env file."
         try:
             if self.provider == "groq":
                 return await self._call_groq(prompt, system_prompt)
             elif self.provider == "openai":
                 return await self._call_openai(prompt, system_prompt)
+            elif self.provider == "ollama":
+                return await self._call_ollama(prompt, system_prompt)
             return f"Unsupported provider: {self.provider}"
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
@@ -83,6 +88,23 @@ class LLMClientOptimized:
         )
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
+
+    async def _call_ollama(self, prompt: str, system_prompt: str) -> str:
+        # Queries a local Ollama server running on port 11434
+        response = await self._client.post(
+            "http://localhost:11434/api/chat",
+            json={
+                "model": settings.DEFAULT_AI_MODEL or "llama3",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                "options": {"temperature": 0.2},
+                "stream": False
+            }
+        )
+        response.raise_for_status()
+        return response.json()["message"]["content"]
 
 # Global singleton (must be named llm_client for backwards compatibility)
 llm_client = LLMClientOptimized()
