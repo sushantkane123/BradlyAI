@@ -76,3 +76,15 @@ venv.bak/
 *.swo
 *~
 .DS_Store
+
+# SQLite databases (development and testing)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+
+# Testing cache and outputs
+.pytest_cache/
+.coverage
+htmlcov/

@@ -4,7 +4,9 @@ BradlyAI Cyber-AI Security Copilot Chat Router
 import asyncio
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from bradlyai.database import get_db
 from fastapi.responses import StreamingResponse, JSONResponse
 
 from bradlyai.database import SessionLocal
@@ -32,13 +34,9 @@ async def generate_ai_stream(user_query: str, context_data: str) -> str:
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(req: ChatRequest):
-    db = SessionLocal()
-    try:
-        alerts = db.query(AlertModel).all()
-        context = "\n".join([f"ID: {a.id}, Title: {a.title}, Status: {a.status}" for a in alerts])
-    finally:
-        db.close()
+async def chat(req: ChatRequest, db: Session = Depends(get_db)):
+    alerts = db.query(AlertModel).all()
+    context = "\n".join([f"ID: {a.id}, Title: {a.title}, Status: {a.status}" for a in alerts])
 
     if req.stream:
         return StreamingResponse(
