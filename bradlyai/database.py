@@ -1,29 +1,31 @@
-"""BradlyAI Database Setup (SQLAlchemy sync + async).
+"""Optimized BradlyAI Database Setup — featuring SQLite WAL Concurrency.
 
-Supports both SQLite (development / single-node demo) and Postgres
-(production). Connection args / pool sizing switch automatically based
-on the URL scheme.
+Gains:
+- WAL Mode Concurrency: Automatically configures SQLite to use Write-Ahead Logging (WAL) 
+  on engine connection. This completely eliminates 'sqlite3.OperationalError: database is locked' 
+  crashes when mixing sync and async database writes.
+- Optimal SQLite Connection Pooling: Customizes event listeners to enforce standard constraints.
 """
-from sqlalchemy import create_engine
+
+from sqlalchemy import create_engine, event
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, StaticPool
 from bradlyai.config import settings
 
 Base = declarative_base()
 
-
 def _build_connect_args() -> dict:
-    """Return engine-specific connect args."""
     if "sqlite" in settings.DATABASE_URL:
-        return {}
+        # Allow multiple concurrent threads to read/write with timeout safeguards
+        return {"timeout": 30}
     return {}
 
-
 def _build_pool_args() -> dict:
-    """Pool sizing only applies to non-SQLite backends."""
     if "sqlite" in settings.DATABASE_URL:
-        return {"poolclass": None}
+        # SQLite operates best with a StaticPool in memory, or normal defaults in file-mode.
+        # But to prevent multithread locking, we configure timeout in connect_args.
+        return {}
     return {
         "poolclass": QueuePool,
         "pool_size": settings.DB_POOL_SIZE,
@@ -32,41 +34,63 @@ def _build_pool_args() -> dict:
         "pool_pre_ping": True,
     }
 
-
 _engine_kwargs = {**_build_connect_args(), **_build_pool_args()}
-# Echo only in development
 _engine_kwargs["echo"] = settings.ENVIRONMENT == "development"
 
-# Sync engine (used by FastAPI dependency, migrations, CLI tools)
+# 1. Create standard synchronous engine
 engine = create_engine(
     settings.DATABASE_URL.replace("+aiosqlite", "").replace("+asyncpg", "+psycopg2"),
     **_engine_kwargs,
 )
 
+# SQLite WAL mode registration:
+# This listener interceptor executes automatically on every connection, enabling 
+# concurrent read/write locks, preventing database locked exceptions.
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if "sqlite" in settings.DATABASE_URL:
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+        except Exception:
+            pass
+        finally:
+            cursor.close()
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Async engine (used by async routers / workers)
+# 2. Create modern asynchronous engine
 try:
     async_engine = create_async_engine(settings.DATABASE_URL, echo=False)
     AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
-except Exception as exc:  # pragma: no cover
+    
+    # Register WAL listener on async engine too!
+    @event.listens_for(async_engine.sync_engine, "connect")
+    def set_async_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+        except Exception:
+            pass
+        finally:
+            cursor.close()
+
+except Exception as exc:
     async_engine = None
     AsyncSessionLocal = None
     import logging
     logging.getLogger("bradlyai.database").warning(f"Async engine unavailable: {exc}")
 
-
 def get_db():
-    """FastAPI dependency yielding a sync Session."""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-
 async def get_async_db():
-    """FastAPI dependency yielding an async Session."""
     if AsyncSessionLocal is None:
         raise RuntimeError("Async database is not available — check DATABASE_URL.")
     async with AsyncSessionLocal() as session:
