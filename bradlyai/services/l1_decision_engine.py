@@ -1,6 +1,7 @@
-"""Optimized BradlyAI L1 Decision Engine — highly concurrent and thread-safe.
+"""Optimized BradlyAI L1 Decision Engine — highly concurrent and Context-Graph enabled.
 
 Gains:
+- Context Graph Pipeline: Dynamically passes pre-enrichment environmental metadata to the LLM.
 - Async Concurrency: Run all signal evaluations concurrently using asyncio.gather.
 - Event Loop Protection: Uses asyncio.to_thread to run blocking CPU/DB-bound synchronous signal 
   checks in the background thread pool, preventing FastAPI server latency spikes.
@@ -81,7 +82,7 @@ class L1DecisionEngineOptimized:
         signals.append(historical_check.check(alert))
         return self._combine(alert, signals, mode)
 
-    async def decide_async(self, alert, mode: str = "active") -> Decision:
+    async def decide_async(self, alert, mode: str = "active", context_graph: Optional[dict] = None) -> Decision:
         """Highly optimized async triage path.
         
         Runs all signal checks CONCURRENTLY. 
@@ -96,10 +97,11 @@ class L1DecisionEngineOptimized:
             whitelist_service.check_alert, alert, severity=alert.severity, source=alert.source
         )
         history_task = asyncio.to_thread(historical_check.check, alert)
-        llm_task = llm_classifier.check(alert)  # Already asynchronous
+        
+        # Passes context graph directly to LLM check
+        llm_task = llm_classifier.check(alert, context_graph)  
 
         # 2. Fire all tasks concurrently
-        # Latency drops from SUM(all_steps) to MAX(slowest_step) [typically the LLM API call]
         fp_sig, freq_sig, whitelist_match, hist_sig, llm_sig = await asyncio.gather(
             fp_task, freq_task, whitelist_task, history_task, llm_task
         )

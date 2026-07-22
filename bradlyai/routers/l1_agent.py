@@ -74,9 +74,14 @@ async def process_alert(input_data: AlertInput):
     if mode not in ("active", "shadow"):
         raise HTTPException(400, "mode must be 'active' or 'shadow'")
 
+    # --- Context Graph Pre-Enrichment Layer ---
+    from bradlyai.services.context_graph import context_graph
+    cg_data = await context_graph.enrich(normalized)
+    # ------------------------------------------
+
     # Use async path with LLM if available, sync otherwise
     if ll1_uses_llm():
-        decision = await l1_engine.decide_async(normalized, mode=mode)
+        decision = await l1_engine.decide_async(normalized, mode=mode, context_graph=cg_data)
     else:
         decision = l1_engine.decide_sync(normalized, mode=mode)
 
