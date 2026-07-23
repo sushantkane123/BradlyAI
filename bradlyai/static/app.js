@@ -1780,4 +1780,4 @@ class CyCraftApp {
     }
 }
 
-const app = new CyCraftAIApp();
+const app = new CyCraftApp();
