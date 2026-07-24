@@ -16,6 +16,7 @@ const state = {
   token: sessionStorage.getItem('bradly_access_token') || '',
   user: JSON.parse(sessionStorage.getItem('bradly_user') || 'null'),
   alertFilters: { severity: 'ALL', status: 'ALL', query: '' },
+  caseFilters: { status: 'ALL', query: '' },
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -138,6 +139,8 @@ async function loadWorkspace() {
 
 function updateChrome() {
   $('#nav-alert-count').textContent = String(state.alerts.filter(alert => !['closed', 'resolved', 'auto_closed'].includes(statusClass(alert.status))).length);
+  const caseCount = $('#nav-case-count');
+  if (caseCount) caseCount.textContent = String(state.cases.filter(item => ['open', 'in_progress', 'escalated'].includes(statusClass(item.status))).length);
   const serviceHealthy = state.health && ['healthy', 'ok', 'alive', 'ready'].includes(String(state.health.status).toLowerCase());
   const connection = $('#connection-state');
   connection.innerHTML = `<span class="status-dot ${serviceHealthy ? 'healthy' : 'unhealthy'}"></span><span>${serviceHealthy ? 'Service healthy' : 'Service unavailable'}</span>`;
@@ -258,6 +261,91 @@ function renderAlerts() {
     </section>`;
 }
 
+function filteredCases() {
+  const { status, query } = state.caseFilters;
+  const search = query.toLowerCase().trim();
+  return state.cases.filter(item => {
+    if (status !== 'ALL' && statusClass(item.status).toUpperCase() !== status) return false;
+    if (!search) return true;
+    return [item.id, item.title, item.assignee, item.priority, item.severity].some(value => String(value || '').toLowerCase().includes(search));
+  });
+}
+
+function renderCases() {
+  if (!state.user) {
+    return `${pageHeader('Cases', 'Manage investigation ownership, evidence, status, and SLA commitments.', 'Authentication required')}
+      <section class="panel">${emptyState('Sign in to access case management', 'Cases are tenant-scoped. Sign in with an analyst account to view, create, assign, and update investigations.', '<p style="margin-top:16px"><button class="button" id="cases-sign-in">Sign in</button></p>')}</section>`;
+  }
+  const cases = filteredCases();
+  const active = state.cases.filter(item => ['open', 'in_progress', 'escalated'].includes(statusClass(item.status)));
+  const priorityCases = active.filter(item => ['P1', 'P2'].includes(String(item.priority || '').toUpperCase()));
+  const breaches = active.filter(item => Number(item.sla_breached) === 1);
+  const unassigned = active.filter(item => !item.assignee).length;
+  return `${pageHeader('Cases', 'Track active investigations, ownership, evidence, and SLA risk.', `${active.length} active cases`)}
+    ${errorNotice(['cases'])}
+    <section class="metric-grid" aria-label="Case management metrics">
+      ${metricCard('Active cases', String(active.length), `${state.cases.length} total cases`, 'info')}
+      ${metricCard('P1 / P2 priority', String(priorityCases.length), 'Immediate analyst attention', priorityCases.length ? 'critical' : '')}
+      ${metricCard('SLA breaches', String(breaches.length), breaches.length ? 'Review and escalate now' : 'No current breaches', breaches.length ? 'critical' : 'positive')}
+      ${metricCard('Unassigned cases', String(unassigned), 'Assign an accountable analyst', unassigned ? 'attention' : '')}
+      ${metricCard('Resolved / closed', String(state.cases.filter(item => ['resolved', 'closed'].includes(statusClass(item.status))).length), 'Historical case record', 'positive')}
+      ${metricCard('Tenant', state.user.tenant_id || 'Default', 'Current authenticated workspace', '')}
+    </section>
+    <section class="panel"><div class="panel-body"><div class="toolbar"><label class="search-box"><input id="case-search" type="search" value="${escapeHtml(state.caseFilters.query)}" placeholder="Search case ID, title, assignee, or priority" aria-label="Search cases"></label><select class="select-control" id="case-status-filter" aria-label="Filter cases by status"><option value="ALL">All status</option><option value="OPEN">Open</option><option value="IN_PROGRESS">In progress</option><option value="ESCALATED">Escalated</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option></select><button class="button" id="new-case">+ New case</button></div><div class="filter-group">${['ALL', 'OPEN', 'IN_PROGRESS', 'ESCALATED', 'RESOLVED', 'CLOSED'].map(value => `<button class="filter-pill ${state.caseFilters.status === value ? 'active' : ''}" data-case-status="${value}">${value === 'ALL' ? 'All cases' : displayStatus(value)}</button>`).join('')}</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Priority</th><th>Case</th><th>Severity</th><th>Status</th><th>Assignee</th><th>SLA</th><th>Age</th></tr></thead><tbody>${cases.length ? cases.map(item => `<tr class="case-row" data-case-id="${escapeHtml(item.id)}" tabindex="0"><td><strong>${escapeHtml(item.priority || 'P3')}</strong></td><td><span class="entity-title">${escapeHtml(item.title || item.id)}</span><span class="entity-subtitle">${escapeHtml(item.id)}</span></td><td><span class="severity ${severityClass(item.severity)}">${escapeHtml(displayStatus(item.severity))}</span></td><td><span class="status-badge ${statusClass(item.status)}">${escapeHtml(displayStatus(item.status))}</span></td><td>${escapeHtml(item.assignee || 'Unassigned')}</td><td>${Number(item.sla_breached) === 1 ? '<span class="health-state unhealthy">Breached</span>' : escapeHtml(item.sla_due_at ? formatDate(item.sla_due_at) : '—')}</td><td title="${escapeHtml(formatDate(item.created_at))}">${escapeHtml(relativeTime(item.created_at))}</td></tr>`).join('') : `<tr><td colspan="7">${emptyState('No cases found', 'Create a case from an alert or adjust the current filters.')}</td></tr>`}</tbody></table></div></section>`;
+}
+
+function openCaseCreateModal(alert = null) {
+  if (!state.user) return openLogin();
+  const root = $('#modal-root');
+  const title = alert ? `Investigate: ${alert.title || alert.id}` : '';
+  const severity = String(alert?.severity || 'MEDIUM').toUpperCase();
+  root.innerHTML = `<form class="modal" id="case-create-form"><h2>Create case</h2><p>${alert ? `Create an investigation linked to alert ${escapeHtml(alert.id)}.` : 'Create a manually tracked SOC investigation.'}</p><div class="field"><label for="case-title">Case title</label><input id="case-title" name="title" value="${escapeHtml(title)}" required maxlength="500"></div><div class="field"><label for="case-severity">Severity</label><select id="case-severity" class="select-control" name="severity"><option ${severity === 'CRITICAL' ? 'selected' : ''}>CRITICAL</option><option ${severity === 'HIGH' ? 'selected' : ''}>HIGH</option><option ${severity === 'MEDIUM' ? 'selected' : ''}>MEDIUM</option><option ${severity === 'LOW' ? 'selected' : ''}>LOW</option></select></div><div class="field"><label for="case-priority">Priority</label><select id="case-priority" class="select-control" name="priority"><option>P1</option><option>P2</option><option selected>P3</option><option>P4</option><option>P5</option></select></div><div class="field"><label for="case-assignee">Assignee <span class="entity-subtitle">Optional</span></label><input id="case-assignee" name="assignee" value="${escapeHtml(state.user.username || '')}" maxlength="100"></div><div class="field"><label for="case-description">Investigation summary <span class="entity-subtitle">Optional</span></label><input id="case-description" name="description" value="${escapeHtml(alert?.title || '')}" maxlength="1000"></div><div class="modal-error" id="case-create-error"></div><div class="modal-actions"><button type="button" class="button secondary" id="cancel-case-create">Cancel</button><button type="submit" class="button">Create case</button></div></form>`;
+  root.classList.add('open'); root.setAttribute('aria-hidden', 'false');
+  $('#cancel-case-create').addEventListener('click', closeModal);
+  $('#case-create-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const error = $('#case-create-error'); error.textContent = '';
+    try {
+      const created = await request('/cases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: form.get('title'), severity: form.get('severity'), priority: form.get('priority'), assignee: form.get('assignee') || null, description: form.get('description') || null, alert_id: alert?.id || null }) });
+      closeModal(); toast(`Case ${created.id} created`, 'success'); await loadWorkspace(); setPage('cases'); openCase(created.id);
+    } catch (failure) { error.textContent = failure.message; }
+  });
+}
+
+async function openCase(caseId) {
+  if (!state.user) return openLogin();
+  const item = state.cases.find(caseItem => String(caseItem.id) === String(caseId));
+  const detail = await loadResource('caseDetail', `/cases/${encodeURIComponent(caseId)}`);
+  const caseItem = detail || item;
+  if (!caseItem) return toast('Case details could not be loaded', 'error');
+  const drawer = $('#alert-drawer');
+  drawer.innerHTML = `<div class="drawer-header"><div><span class="severity ${severityClass(caseItem.severity)}">${escapeHtml(caseItem.priority || 'P3')} · ${escapeHtml(displayStatus(caseItem.severity))}</span><h2 id="drawer-title">${escapeHtml(caseItem.title || caseItem.id)}</h2><span class="entity-subtitle">${escapeHtml(caseItem.id)}</span></div><button class="icon-button" id="close-drawer" aria-label="Close case detail">×</button></div><div class="drawer-body"><section><h3 class="section-title">Case control</h3><div class="detail-grid"><div><dt>Status</dt><dd><select class="select-control" id="case-status-select"><option ${caseItem.status === 'OPEN' ? 'selected' : ''}>OPEN</option><option ${caseItem.status === 'IN_PROGRESS' ? 'selected' : ''}>IN_PROGRESS</option><option ${caseItem.status === 'ESCALATED' ? 'selected' : ''}>ESCALATED</option><option ${caseItem.status === 'RESOLVED' ? 'selected' : ''}>RESOLVED</option><option ${caseItem.status === 'CLOSED' ? 'selected' : ''}>CLOSED</option></select></dd></div><div><dt>Assignee</dt><dd>${escapeHtml(caseItem.assignee || 'Unassigned')}</dd></div><div><dt>SLA due</dt><dd>${escapeHtml(caseItem.sla_due_at ? formatDate(caseItem.sla_due_at) : '—')}${Number(caseItem.sla_breached) === 1 ? ' · Breached' : ''}</dd></div><div><dt>Linked alerts</dt><dd>${escapeHtml((caseItem.linked_alerts || []).join(', ') || 'None')}</dd></div></div><div class="drawer-actions"><button class="button small" id="save-case-status">Update status</button><button class="button secondary small" id="add-case-note">Add note</button><button class="button secondary small" id="add-case-evidence">Add evidence</button></div></section><section><h3 class="section-title">Investigation notes</h3>${(caseItem.notes || []).length ? `<ol class="timeline">${caseItem.notes.map(note => `<li><time>${escapeHtml(formatDate(note.at))} · ${escapeHtml(note.author || 'system')}</time>${escapeHtml(note.note || '')}</li>`).join('')}</ol>` : '<div class="drawer-note">No notes have been added to this case.</div>'}</section><section><h3 class="section-title">Evidence</h3>${(caseItem.evidence || []).length ? caseItem.evidence.map(evidence => `<div class="audit-item"><strong>${escapeHtml(displayStatus(evidence.type))}</strong><span>${escapeHtml(evidence.value)}${evidence.source ? ` · ${escapeHtml(evidence.source)}` : ''}</span></div>`).join('') : '<div class="drawer-note">No evidence has been recorded yet.</div>'}</section></div>`;
+  drawer.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); showScrim(true);
+  $('#close-drawer').addEventListener('click', closeDrawer);
+  $('#save-case-status').addEventListener('click', async () => {
+    try { await request(`/cases/${encodeURIComponent(caseItem.id)}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: $('#case-status-select').value }) }); toast('Case status updated', 'success'); await loadWorkspace(); openCase(caseItem.id); } catch (failure) { toast(failure.message, 'error'); }
+  });
+  $('#add-case-note').addEventListener('click', () => openCaseNoteModal(caseItem.id));
+  $('#add-case-evidence').addEventListener('click', () => openCaseEvidenceModal(caseItem.id));
+}
+
+function openCaseNoteModal(caseId) {
+  const root = $('#modal-root');
+  root.innerHTML = `<form class="modal" id="case-note-form"><h2>Add investigation note</h2><p>Notes are retained in the case audit timeline.</p><div class="field"><label for="case-note">Note</label><input id="case-note" name="note" required maxlength="4000" placeholder="Document investigation findings or analyst handoff"></div><div class="modal-error" id="case-note-error"></div><div class="modal-actions"><button type="button" class="button secondary" id="cancel-case-note">Cancel</button><button type="submit" class="button">Add note</button></div></form>`;
+  root.classList.add('open'); root.setAttribute('aria-hidden', 'false');
+  $('#cancel-case-note').addEventListener('click', closeModal);
+  $('#case-note-form').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); try { await request(`/cases/${encodeURIComponent(caseId)}/notes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: form.get('note'), note_type: 'comment' }) }); closeModal(); toast('Note added', 'success'); await loadWorkspace(); openCase(caseId); } catch (failure) { $('#case-note-error').textContent = failure.message; } });
+}
+
+function openCaseEvidenceModal(caseId) {
+  const root = $('#modal-root');
+  root.innerHTML = `<form class="modal" id="case-evidence-form"><h2>Add evidence</h2><p>Record an observable artifact with its source for investigation traceability.</p><div class="field"><label for="evidence-type">Evidence type</label><select id="evidence-type" class="select-control" name="type"><option>IP</option><option>DOMAIN</option><option>HASH</option><option>URL</option><option>HOST</option><option>LOG</option><option>OTHER</option></select></div><div class="field"><label for="evidence-value">Value</label><input id="evidence-value" name="value" required maxlength="4000" placeholder="IOC, log reference, hostname, or hash"></div><div class="field"><label for="evidence-source">Source <span class="entity-subtitle">Optional</span></label><input id="evidence-source" name="source" maxlength="250" placeholder="Wazuh, Sentinel, analyst, etc."></div><div class="modal-error" id="case-evidence-error"></div><div class="modal-actions"><button type="button" class="button secondary" id="cancel-case-evidence">Cancel</button><button type="submit" class="button">Add evidence</button></div></form>`;
+  root.classList.add('open'); root.setAttribute('aria-hidden', 'false');
+  $('#cancel-case-evidence').addEventListener('click', closeModal);
+  $('#case-evidence-form').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.currentTarget); try { await request(`/cases/${encodeURIComponent(caseId)}/evidence`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evidence_type: form.get('type'), value: form.get('value'), source: form.get('source') || null }) }); closeModal(); toast('Evidence added', 'success'); await loadWorkspace(); openCase(caseId); } catch (failure) { $('#case-evidence-error').textContent = failure.message; } });
+}
+
 function integrationStatus(status, configured = true) {
   if (!configured) return { label: 'Not configured', style: 'warning' };
   if (status) return { label: 'Healthy', style: 'healthy' };
@@ -306,9 +394,9 @@ function render() {
     content.innerHTML = `<div class="empty-state"><div class="loading">Loading SOC workspace</div></div>`;
     return;
   }
-  const contentByPage = { overview: renderOverview, alerts: renderAlerts, integrations: renderIntegrations };
+  const contentByPage = { overview: renderOverview, alerts: renderAlerts, cases: renderCases, integrations: renderIntegrations };
   content.innerHTML = (contentByPage[state.page] || renderOverview)();
-  $('#page-name').textContent = ({ overview: 'Overview', alerts: 'Alerts', integrations: 'Integrations' })[state.page] || 'Overview';
+  $('#page-name').textContent = ({ overview: 'Overview', alerts: 'Alerts', cases: 'Cases', integrations: 'Integrations' })[state.page] || 'Overview';
   bindPageEvents();
 }
 
@@ -327,6 +415,20 @@ function bindPageEvents() {
   $$('#app-content [data-severity-filter]').forEach(button => button.addEventListener('click', () => { state.alertFilters.severity = button.dataset.severityFilter; render(); }));
   const clear = $('#clear-alert-filters');
   if (clear) clear.addEventListener('click', () => { state.alertFilters = { severity: 'ALL', status: 'ALL', query: '' }; render(); });
+
+  const signIn = $('#cases-sign-in');
+  if (signIn) signIn.addEventListener('click', openLogin);
+  const newCase = $('#new-case');
+  if (newCase) newCase.addEventListener('click', () => openCaseCreateModal());
+  const caseSearch = $('#case-search');
+  if (caseSearch) caseSearch.addEventListener('input', event => { state.caseFilters.query = event.target.value; render(); });
+  const caseStatus = $('#case-status-filter');
+  if (caseStatus) { caseStatus.value = state.caseFilters.status; caseStatus.addEventListener('change', event => { state.caseFilters.status = event.target.value; render(); }); }
+  $$('#app-content [data-case-status]').forEach(button => button.addEventListener('click', () => { state.caseFilters.status = button.dataset.caseStatus; render(); }));
+  $$('.case-row').forEach(row => {
+    row.addEventListener('click', () => openCase(row.dataset.caseId));
+    row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openCase(row.dataset.caseId); } });
+  });
 }
 
 async function openAlert(alertId) {
@@ -339,7 +441,7 @@ async function openAlert(alertId) {
   ]);
   const alert = detail || baseAlert;
   const entries = (audit?.entries || state.audit).filter(item => String(item.alert_id) === String(alert.id)).slice(0, 8);
-  drawer.innerHTML = `<div class="drawer-header"><div><span class="severity ${severityClass(alert.severity)}">${escapeHtml(displayStatus(alert.severity))}</span><h2 id="drawer-title">${escapeHtml(alert.title || alert.id)}</h2><span class="entity-subtitle">${escapeHtml(alert.id)}</span></div><button class="icon-button" id="close-drawer" aria-label="Close alert detail">×</button></div><div class="drawer-body"><div class="drawer-actions"><button class="button secondary small" id="copy-alert-id">Copy alert ID</button><button class="button secondary small" ${state.user ? '' : 'disabled title="Sign in to create a case"'}>Create case</button></div><section><h3 class="section-title">Alert summary</h3><dl class="detail-grid"><div><dt>Status</dt><dd><span class="status-badge ${statusClass(alert.status)}">${escapeHtml(displayStatus(alert.status))}</span></dd></div><div><dt>Confidence</dt><dd>${escapeHtml(formatConfidence(alert.ai_confidence))}</dd></div><div><dt>Asset</dt><dd>${escapeHtml(alert.endpoint || '—')}</dd></div><div><dt>Source IP</dt><dd>${escapeHtml(alert.ip || '—')}</dd></div><div><dt>MITRE ATT&CK</dt><dd>${escapeHtml(alert.mitre || 'Not mapped')}</dd></div><div><dt>Observed</dt><dd>${escapeHtml(formatDate(alert.timestamp))}</dd></div></dl></section><section><h3 class="section-title">Investigation timeline</h3>${Array.isArray(alert.storyline) && alert.storyline.length ? `<ol class="timeline">${alert.storyline.map(item => `<li><time>${escapeHtml(item.time || '')}</time>${escapeHtml(item.event || '')}</li>`).join('')}</ol>` : `<div class="drawer-note">No timeline evidence has been recorded for this alert.</div>`}</section><section><h3 class="section-title">L1 decision evidence</h3>${entries.length ? entries.map(entry => `<div class="audit-item"><strong>${escapeHtml(displayStatus(entry.decision))} · ${escapeHtml(formatConfidence(entry.confidence))}</strong><span>${escapeHtml(entry.reason || entry.primary_signal || 'Decision recorded')} · ${escapeHtml(formatDate(entry.timestamp))}</span></div>`).join('') : `<div class="drawer-note">No L1 decision evidence is associated with this alert yet.</div>`}</section></div>`;
+  drawer.innerHTML = `<div class="drawer-header"><div><span class="severity ${severityClass(alert.severity)}">${escapeHtml(displayStatus(alert.severity))}</span><h2 id="drawer-title">${escapeHtml(alert.title || alert.id)}</h2><span class="entity-subtitle">${escapeHtml(alert.id)}</span></div><button class="icon-button" id="close-drawer" aria-label="Close alert detail">×</button></div><div class="drawer-body"><div class="drawer-actions"><button class="button secondary small" id="copy-alert-id">Copy alert ID</button><button class="button secondary small" id="create-case-from-alert" ${state.user ? '' : 'disabled title="Sign in to create a case"'}>Create case</button></div><section><h3 class="section-title">Alert summary</h3><dl class="detail-grid"><div><dt>Status</dt><dd><span class="status-badge ${statusClass(alert.status)}">${escapeHtml(displayStatus(alert.status))}</span></dd></div><div><dt>Confidence</dt><dd>${escapeHtml(formatConfidence(alert.ai_confidence))}</dd></div><div><dt>Asset</dt><dd>${escapeHtml(alert.endpoint || '—')}</dd></div><div><dt>Source IP</dt><dd>${escapeHtml(alert.ip || '—')}</dd></div><div><dt>MITRE ATT&CK</dt><dd>${escapeHtml(alert.mitre || 'Not mapped')}</dd></div><div><dt>Observed</dt><dd>${escapeHtml(formatDate(alert.timestamp))}</dd></div></dl></section><section><h3 class="section-title">Investigation timeline</h3>${Array.isArray(alert.storyline) && alert.storyline.length ? `<ol class="timeline">${alert.storyline.map(item => `<li><time>${escapeHtml(item.time || '')}</time>${escapeHtml(item.event || '')}</li>`).join('')}</ol>` : `<div class="drawer-note">No timeline evidence has been recorded for this alert.</div>`}</section><section><h3 class="section-title">L1 decision evidence</h3>${entries.length ? entries.map(entry => `<div class="audit-item"><strong>${escapeHtml(displayStatus(entry.decision))} · ${escapeHtml(formatConfidence(entry.confidence))}</strong><span>${escapeHtml(entry.reason || entry.primary_signal || 'Decision recorded')} · ${escapeHtml(formatDate(entry.timestamp))}</span></div>`).join('') : `<div class="drawer-note">No L1 decision evidence is associated with this alert yet.</div>`}</section></div>`;
   drawer.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
   showScrim(true);
@@ -347,6 +449,8 @@ async function openAlert(alertId) {
   $('#copy-alert-id').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(String(alert.id)); toast('Alert ID copied', 'success'); } catch (_) { toast('Could not copy alert ID', 'error'); }
   });
+  const createCase = $('#create-case-from-alert');
+  if (createCase) createCase.addEventListener('click', () => openCaseCreateModal(alert));
 }
 
 function closeDrawer() {
