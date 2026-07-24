@@ -59,7 +59,7 @@ def run_migrations(engine: Engine) -> dict:
     added = []
 
     # AlertModel: existing columns + tenant_id, case_id, assignee, playbook_id
-    for col_name in ("signature", "closed_at", "closed_reason", "closed_by",
+    for col_name in ("signature", "closed_at", "closed_reason", "closed_by", "source", "raw_event",
                      "tenant_id", "case_id", "assigned_to", "playbook_id"):
         col = AlertModel.__table__.c[col_name]
         if ensure_column(engine, "alerts", col_name, col):

@@ -30,6 +30,8 @@ def get_system_config():
         "groq_key_configured": bool(settings.GROQ_API_KEY),
         "auto_containment_threshold": settings.AUTO_CONTAINMENT_THRESHOLD,
         "live_simulation_active": settings.LIVE_SIMULATION_WORKER_ACTIVE,
+        "demo_data_enabled": settings.DEMO_DATA_ENABLED,
+        "ingestion_default_mode": settings.INGESTION_DEFAULT_MODE,
         "database_url": settings.DATABASE_URL,
         "llm_provider": settings.LLM_PROVIDER,
         "rate_limit_enabled": settings.RATE_LIMIT_ENABLED,

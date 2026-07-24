@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     AUTO_CONTAINMENT_THRESHOLD: float = 0.85
     LIVE_SIMULATION_WORKER_ACTIVE: bool = True
     SIMULATION_INTERVAL_SECONDS: int = 30
+    # Retained as True for backwards-compatible test/demo installs. Set false in
+    # every real deployment to start with an empty, live-ingestion-only workspace.
+    DEMO_DATA_ENABLED: bool = True
+
+    # ── Real event ingestion ───────────────────────────────────────────
+    # shadow records and audits decisions without closing external alerts.
+    INGESTION_DEFAULT_MODE: str = "shadow"
+    # When configured, POST /api/v1/ingest/events requires X-Ingestion-Key.
+    INGESTION_SHARED_SECRET: str = ""
 
     # ── Rate Limiting ──────────────────────────────────────────────────
     RATE_LIMIT_ENABLED: bool = True
@@ -299,6 +308,8 @@ class Settings(BaseSettings):
     # ── Validators ─────────────────────────────────────────────────────
     @model_validator(mode="after")
     def _validate_prod_secrets(self):
+        if self.INGESTION_DEFAULT_MODE not in ("shadow", "active"):
+            raise ValueError("INGESTION_DEFAULT_MODE must be 'shadow' or 'active'.")
         # Fail fast in production if JWT secret is still the dev default
         if self.ENVIRONMENT.lower() == "production":
             secret = self.AUTH_JWT_SECRET or ""

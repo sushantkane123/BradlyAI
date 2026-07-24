@@ -1,5 +1,5 @@
 """SQLAlchemy Models for Enterprise Alerts & Incident Triage."""
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Index
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Index, Text
 from sqlalchemy.orm import relationship
 from bradlyai.database import Base
 import datetime
@@ -16,6 +16,9 @@ class AlertModel(Base):
     mitre = Column(String)
     status = Column(String)
     ai_confidence = Column(String)
+    source = Column(String, default="bradlyai", index=True)
+    # Original event retained as JSON text for an analyst's evidence trail.
+    raw_event = Column(Text, nullable=True)
     signature = Column(String, index=True)  # hash(title+endpoint+ip+user+mitre)
     closed_at = Column(DateTime, nullable=True)
     closed_reason = Column(String, nullable=True)

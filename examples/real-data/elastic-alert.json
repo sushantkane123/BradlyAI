@@ -1,0 +1,21 @@
+{
+  "source": "elastic",
+  "mode": "shadow",
+  "payload": {
+    "_id": "elastic-lab-001",
+    "_source": {
+      "@timestamp": "2026-07-24T12:15:00Z",
+      "message": "Multiple failed SSH logins from a test source",
+      "kibana.alert.severity": "medium",
+      "kibana.alert.rule": {
+        "name": "Potential SSH brute-force activity",
+        "description": "Lab replay fixture"
+      },
+      "host": {"name": "LAB-LINUX-01"},
+      "source": {"ip": "198.51.100.23"},
+      "user": {"name": "labuser"},
+      "process": {"name": "sshd"},
+      "threat": {"technique": {"id": "T1110"}}
+    }
+  }
+}

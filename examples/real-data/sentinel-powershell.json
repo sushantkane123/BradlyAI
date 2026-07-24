@@ -1,0 +1,22 @@
+{
+  "source": "sentinel",
+  "mode": "shadow",
+  "payload": {
+    "SystemAlertId": "sentinel-lab-001",
+    "AlertDisplayName": "Suspicious PowerShell command line",
+    "Description": "A PowerShell command with encoded content was detected in a lab endpoint.",
+    "Severity": "High",
+    "CompromisedEntity": "LAB-WIN-01",
+    "StartTimeUtc": "2026-07-24T12:00:00Z",
+    "Tactics": "Execution, DefenseEvasion",
+    "Techniques": "T1059.001",
+    "Entities": [
+      {"Type": "host", "HostName": "LAB-WIN-01"},
+      {"Type": "ip", "Address": "198.51.100.20"},
+      {"Type": "account", "AccountName": "lab\\analyst"}
+    ],
+    "ExtendedProperties": {
+      "Process": "powershell.exe -enc VABlAHMAdAAtAFAAYQB5AGwAbwBhAGQ="
+    }
+  }
+}
