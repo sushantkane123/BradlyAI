@@ -415,3 +415,15 @@ See [CHANGELOG.md](CHANGELOG.md).
 - Full incident lifecycle: alert → detect → investigate → evidence → close
 - 6 critical bugs fixed, async architecture
 - 11/11 tests passing
+
+## Real SIEM / XDR / EDR data mode
+
+For a client-safe, empty workspace with no seeded showcase alerts, configure:
+
+```dotenv
+DEMO_DATA_ENABLED=false
+LIVE_SIMULATION_WORKER_ACTIVE=false
+INGESTION_DEFAULT_MODE=shadow
+```
+
+BradlyAI accepts real event envelopes from Wazuh, Splunk, Microsoft Sentinel, Microsoft Defender for Endpoint, CrowdStrike Falcon, Elastic, generic SIEM, XDR, EDR, and custom webhook sources at `POST /api/v1/ingest/events`. Sanitized replay fixtures and the source contract are documented in [docs_REAL_DATA_MODE.md](docs_REAL_DATA_MODE.md).

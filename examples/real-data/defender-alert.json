@@ -1,0 +1,16 @@
+{
+  "source": "microsoft_defender",
+  "mode": "shadow",
+  "payload": {
+    "id": "mde-lab-001",
+    "alertTitle": "Potential ransomware behavior detected",
+    "description": "Lab-only Defender alert used to validate XDR normalization.",
+    "severity": "High",
+    "deviceName": "LAB-DEFENDER-01",
+    "sourceIp": "198.51.100.22",
+    "userName": "LAB\\analyst",
+    "processName": "lab-ransomware-simulator.exe",
+    "mitreTechniques": "T1486",
+    "createdDateTime": "2026-07-24T12:10:00Z"
+  }
+}

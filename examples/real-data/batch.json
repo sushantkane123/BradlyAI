@@ -1,0 +1,44 @@
+{
+  "mode": "shadow",
+  "events": [
+    {
+      "source": "siem",
+      "payload": {
+        "id": "generic-siem-lab-001",
+        "title": "Approved vulnerability scanner activity",
+        "description": "Sanitized scanner activity used for integration replay.",
+        "severity": "low",
+        "asset": "LAB-SCANNER-01",
+        "source_ip": "198.51.100.40",
+        "user": "scanner",
+        "mitre": "T1595",
+        "timestamp": "2026-07-24T12:20:00Z"
+      }
+    },
+    {
+      "source": "xdr",
+      "payload": {
+        "event_id": "generic-xdr-lab-001",
+        "name": "Suspicious remote service creation",
+        "severity": "high",
+        "host": "LAB-SERVER-02",
+        "src_ip": "198.51.100.41",
+        "process_name": "sc.exe",
+        "mitre_technique": "T1569.002",
+        "timestamp": "2026-07-24T12:21:00Z"
+      }
+    },
+    {
+      "source": "edr",
+      "payload": {
+        "alert_id": "generic-edr-lab-001",
+        "message": "Endpoint behavioral anomaly detected in a lab replay",
+        "risk_score": 88,
+        "endpoint": "LAB-ENDPOINT-02",
+        "ip": "198.51.100.42",
+        "process": "lab-test.exe",
+        "timestamp": "2026-07-24T12:22:00Z"
+      }
+    }
+  ]
+}

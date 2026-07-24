@@ -1,0 +1,29 @@
+{
+  "source": "crowdstrike",
+  "mode": "shadow",
+  "payload": {
+    "resources": [
+      {
+        "detection_id": "ldt:lab:001",
+        "max_severity_displayname": "High",
+        "first_behavior": "2026-07-24T12:05:00Z",
+        "device": {
+          "hostname": "LAB-ENDPOINT-01",
+          "local_ip": "10.10.10.25",
+          "external_ip": "198.51.100.21"
+        },
+        "behaviors": [
+          {
+            "description": "Credential dumping behavior in a controlled lab simulation",
+            "severity": 80,
+            "filename": "rundll32.exe",
+            "cmdline": "rundll32.exe lab-test.dll,EntryPoint",
+            "user_name": "LAB\\analyst",
+            "tactic": "Credential Access",
+            "technique": "T1003"
+          }
+        ]
+      }
+    ]
+  }
+}

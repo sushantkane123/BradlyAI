@@ -34,6 +34,10 @@ logger = logging.getLogger("bradlyai")
 
 
 def seed_database():
+    """Insert showcase records only when an operator explicitly enables demo data."""
+    if not settings.DEMO_DATA_ENABLED:
+        logger.info("Demo data disabled — waiting for live SIEM/XDR/EDR ingestion.")
+        return
     db = SessionLocal()
     try:
         if db.query(AlertModel).count() == 0:

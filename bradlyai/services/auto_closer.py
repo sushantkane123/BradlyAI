@@ -63,6 +63,14 @@ class AutoCloser:
             alert = db.query(AlertModel).filter(
                 AlertModel.id == (alert_id_from_db or decision.alert_id)
             ).first()
+            # Real-event ingestion stores the canonical source on AlertModel; prefer
+            # it over legacy ID-prefix inference so every audit row is attributable.
+            if alert:
+                if getattr(alert, "source", None):
+                    alert_source = alert.source
+                    audit.alert_source = alert_source
+                audit.alert_title = alert.title
+                audit.alert_severity = alert.severity
 
             if decision.decision == "CLOSE" and alert:
                 alert.status = "closed"

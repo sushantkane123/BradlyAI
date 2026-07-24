@@ -10,6 +10,7 @@ const state = {
   health: null,
   integrationHealth: null,
   wazuhHealth: null,
+  systemConfig: null,
   cases: [],
   errors: {},
   loading: true,
@@ -116,13 +117,14 @@ async function loadWorkspace() {
   state.loading = true;
   render();
   const hours = Number(state.hours);
-  const [alerts, l1Stats, audit, health, wazuhHealth, integrationHealth, cases] = await Promise.all([
+  const [alerts, l1Stats, audit, health, wazuhHealth, integrationHealth, systemConfig, cases] = await Promise.all([
     loadResource('alerts', '/alerts?limit=500'),
     loadResource('l1Stats', `/l1/stats?since_hours=${hours}`),
     loadResource('audit', `/l1/audit?since_hours=${hours}&limit=100`),
     loadResource('health', '/health'),
     loadResource('wazuhHealth', '/l1/wazuh/health'),
     loadResource('integrationHealth', '/integration/wazuh/health'),
+    loadResource('systemConfig', '/system/config'),
     loadResource('cases', '/cases?limit=100'),
   ]);
   state.alerts = Array.isArray(alerts) ? alerts : [];
@@ -131,6 +133,7 @@ async function loadWorkspace() {
   state.health = health;
   state.wazuhHealth = wazuhHealth;
   state.integrationHealth = integrationHealth;
+  state.systemConfig = systemConfig;
   state.cases = Array.isArray(cases) ? cases : [];
   state.loading = false;
   updateChrome();
@@ -175,12 +178,13 @@ function emptyState(title, message, action = '') {
 }
 
 function alertRows(alerts, limit = alerts.length) {
-  if (!alerts.length) return `<tr><td colspan="7">${emptyState('No alerts found', 'Change the filters or connect an alert source to begin triage.')}</td></tr>`;
+  if (!alerts.length) return `<tr><td colspan="8">${emptyState('No alerts found', 'Change the filters or connect an alert source to begin triage.')}</td></tr>`;
   return alerts.slice(0, limit).map(alert => {
     const severity = severityClass(alert.severity);
     return `<tr class="alert-row" data-alert-id="${escapeHtml(alert.id)}" tabindex="0">
       <td><span class="severity ${severity}">${escapeHtml(displayStatus(alert.severity))}</span></td>
       <td><span class="entity-title">${escapeHtml(alert.title || alert.id)}</span><span class="entity-subtitle">${escapeHtml(alert.id)}</span></td>
+      <td><span class="entity-subtitle">${escapeHtml(displayStatus(alert.source || 'Unknown'))}</span></td>
       <td><span class="entity-title">${escapeHtml(alert.endpoint || '—')}</span><span class="entity-subtitle">${escapeHtml(alert.ip || 'No IP')}</span></td>
       <td>${alert.mitre ? `<span class="entity-subtitle">${escapeHtml(alert.mitre)}</span>` : '—'}</td>
       <td><span class="status-badge ${statusClass(alert.status)}">${escapeHtml(displayStatus(alert.status))}</span></td>
@@ -201,7 +205,11 @@ function renderOverview() {
   const bySeverity = ['critical', 'high', 'medium', 'low'].map(severity => ({ severity, count: alerts.filter(alert => severityClass(alert.severity) === severity).length }));
   const maxSeverity = Math.max(1, ...bySeverity.map(item => item.count));
   const l1Mode = stats.current_mode ? `${displayStatus(stats.current_mode)} mode` : 'Policy mode unavailable';
+  const dataMode = state.systemConfig?.demo_data_enabled
+    ? '<div class="data-mode-banner demo"><strong>Demo data mode is enabled.</strong><span>Seeded showcase alerts may be visible. Do not use this workspace for client operations.</span></div>'
+    : '<div class="data-mode-banner live"><strong>Live ingestion mode.</strong><span>Demo data is disabled. Alerts shown here originate from configured SIEM, XDR, EDR, or replay sources.</span></div>';
   return `${pageHeader('Security overview', 'Prioritize investigation work, review automated decisions, and monitor service health.', `<span>Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`)}
+    ${dataMode}
     ${errorNotice(['alerts', 'l1Stats', 'health'])}
     <section class="metric-grid" aria-label="Security operations metrics">
       ${metricCard('Open alerts', String(openAlerts.length), `${alerts.length} received in workspace`, 'info')}
@@ -215,7 +223,7 @@ function renderOverview() {
       <div class="stack">
         <section class="panel">
           <div class="panel-header"><h2>Priority alert queue</h2><button class="text-button" data-go-page="alerts">View all alerts</button></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>Severity</th><th>Alert</th><th>Asset</th><th>MITRE</th><th>Status</th><th>Confidence</th><th>Age</th></tr></thead><tbody>${alertRows([...openAlerts].sort((a, b) => ['critical','high','medium','low'].indexOf(severityClass(a.severity)) - ['critical','high','medium','low'].indexOf(severityClass(b.severity))), 7)}</tbody></table></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Severity</th><th>Alert</th><th>Source</th><th>Asset</th><th>MITRE</th><th>Status</th><th>Confidence</th><th>Age</th></tr></thead><tbody>${alertRows([...openAlerts].sort((a, b) => ['critical','high','medium','low'].indexOf(severityClass(a.severity)) - ['critical','high','medium','low'].indexOf(severityClass(b.severity))), 7)}</tbody></table></div>
         </section>
         <section class="panel"><div class="panel-header"><h2>Alert distribution by severity</h2><span class="entity-subtitle">Current workspace</span></div><div class="panel-body"><div class="bar-list">${bySeverity.map(item => `<div class="bar-item"><span>${displayStatus(item.severity)}</span><div class="bar-track"><div class="bar-fill ${item.severity}" style="width:${Math.max(0, item.count / maxSeverity * 100)}%"></div></div><span class="bar-value">${item.count}</span></div>`).join('')}</div></div></section>
       </div>
@@ -257,7 +265,7 @@ function renderAlerts() {
           ${['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(value => `<button class="filter-pill ${filter.severity === value ? 'active' : ''}" data-severity-filter="${value}">${value === 'ALL' ? 'All alerts' : displayStatus(value)}</button>`).join('')}
         </div>
       </div>
-      <div class="table-wrap"><table class="data-table"><thead><tr><th>Severity</th><th>Alert</th><th>Asset</th><th>MITRE</th><th>Status</th><th>Confidence</th><th>Age</th></tr></thead><tbody>${alertRows(alerts)}</tbody></table></div>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Severity</th><th>Alert</th><th>Source</th><th>Asset</th><th>MITRE</th><th>Status</th><th>Confidence</th><th>Age</th></tr></thead><tbody>${alertRows(alerts)}</tbody></table></div>
     </section>`;
 }
 
@@ -441,7 +449,12 @@ async function openAlert(alertId) {
   ]);
   const alert = detail || baseAlert;
   const entries = (audit?.entries || state.audit).filter(item => String(item.alert_id) === String(alert.id)).slice(0, 8);
-  drawer.innerHTML = `<div class="drawer-header"><div><span class="severity ${severityClass(alert.severity)}">${escapeHtml(displayStatus(alert.severity))}</span><h2 id="drawer-title">${escapeHtml(alert.title || alert.id)}</h2><span class="entity-subtitle">${escapeHtml(alert.id)}</span></div><button class="icon-button" id="close-drawer" aria-label="Close alert detail">×</button></div><div class="drawer-body"><div class="drawer-actions"><button class="button secondary small" id="copy-alert-id">Copy alert ID</button><button class="button secondary small" id="create-case-from-alert" ${state.user ? '' : 'disabled title="Sign in to create a case"'}>Create case</button></div><section><h3 class="section-title">Alert summary</h3><dl class="detail-grid"><div><dt>Status</dt><dd><span class="status-badge ${statusClass(alert.status)}">${escapeHtml(displayStatus(alert.status))}</span></dd></div><div><dt>Confidence</dt><dd>${escapeHtml(formatConfidence(alert.ai_confidence))}</dd></div><div><dt>Asset</dt><dd>${escapeHtml(alert.endpoint || '—')}</dd></div><div><dt>Source IP</dt><dd>${escapeHtml(alert.ip || '—')}</dd></div><div><dt>MITRE ATT&CK</dt><dd>${escapeHtml(alert.mitre || 'Not mapped')}</dd></div><div><dt>Observed</dt><dd>${escapeHtml(formatDate(alert.timestamp))}</dd></div></dl></section><section><h3 class="section-title">Investigation timeline</h3>${Array.isArray(alert.storyline) && alert.storyline.length ? `<ol class="timeline">${alert.storyline.map(item => `<li><time>${escapeHtml(item.time || '')}</time>${escapeHtml(item.event || '')}</li>`).join('')}</ol>` : `<div class="drawer-note">No timeline evidence has been recorded for this alert.</div>`}</section><section><h3 class="section-title">L1 decision evidence</h3>${entries.length ? entries.map(entry => `<div class="audit-item"><strong>${escapeHtml(displayStatus(entry.decision))} · ${escapeHtml(formatConfidence(entry.confidence))}</strong><span>${escapeHtml(entry.reason || entry.primary_signal || 'Decision recorded')} · ${escapeHtml(formatDate(entry.timestamp))}</span></div>`).join('') : `<div class="drawer-note">No L1 decision evidence is associated with this alert yet.</div>`}</section></div>`;
+  let rawEventText = '';
+  if (alert.raw_event) {
+    try { rawEventText = JSON.stringify(JSON.parse(alert.raw_event), null, 2); } catch (_) { rawEventText = String(alert.raw_event); }
+    rawEventText = rawEventText.slice(0, 12000);
+  }
+  drawer.innerHTML = `<div class="drawer-header"><div><span class="severity ${severityClass(alert.severity)}">${escapeHtml(displayStatus(alert.severity))}</span><h2 id="drawer-title">${escapeHtml(alert.title || alert.id)}</h2><span class="entity-subtitle">${escapeHtml(alert.id)}</span></div><button class="icon-button" id="close-drawer" aria-label="Close alert detail">×</button></div><div class="drawer-body"><div class="drawer-actions"><button class="button secondary small" id="copy-alert-id">Copy alert ID</button><button class="button secondary small" id="create-case-from-alert" ${state.user ? '' : 'disabled title="Sign in to create a case"'}>Create case</button></div><section><h3 class="section-title">Alert summary</h3><dl class="detail-grid"><div><dt>Status</dt><dd><span class="status-badge ${statusClass(alert.status)}">${escapeHtml(displayStatus(alert.status))}</span></dd></div><div><dt>Confidence</dt><dd>${escapeHtml(formatConfidence(alert.ai_confidence))}</dd></div><div><dt>Asset</dt><dd>${escapeHtml(alert.endpoint || '—')}</dd></div><div><dt>Source IP</dt><dd>${escapeHtml(alert.ip || '—')}</dd></div><div><dt>Source</dt><dd>${escapeHtml(displayStatus(alert.source || 'Unknown'))}</dd></div><div><dt>MITRE ATT&CK</dt><dd>${escapeHtml(alert.mitre || 'Not mapped')}</dd></div><div><dt>Observed</dt><dd>${escapeHtml(formatDate(alert.timestamp))}</dd></div></dl></section><section><h3 class="section-title">Investigation timeline</h3>${Array.isArray(alert.storyline) && alert.storyline.length ? `<ol class="timeline">${alert.storyline.map(item => `<li><time>${escapeHtml(item.time || '')}</time>${escapeHtml(item.event || '')}</li>`).join('')}</ol>` : `<div class="drawer-note">No timeline evidence has been recorded for this alert.</div>`}</section><section><h3 class="section-title">L1 decision evidence</h3>${entries.length ? entries.map(entry => `<div class="audit-item"><strong>${escapeHtml(displayStatus(entry.decision))} · ${escapeHtml(formatConfidence(entry.confidence))}</strong><span>${escapeHtml(entry.reason || entry.primary_signal || 'Decision recorded')} · ${escapeHtml(formatDate(entry.timestamp))}</span></div>`).join('') : `<div class="drawer-note">No L1 decision evidence is associated with this alert yet.</div>`}</section>${rawEventText ? `<section><h3 class="section-title">Original source event</h3><pre class="raw-event">${escapeHtml(rawEventText)}</pre></section>` : ''}</div>`;
   drawer.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
   showScrim(true);

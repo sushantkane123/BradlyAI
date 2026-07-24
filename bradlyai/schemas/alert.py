@@ -27,6 +27,11 @@ class AlertCreate(AlertBase):
 
 class AlertResponse(AlertBase):
     storyline: List[StorylineItem]
+    source: Optional[str] = None
+    raw_event: Optional[str] = None
+    signature: Optional[str] = None
+    assigned_to: Optional[str] = None
+    case_id: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
