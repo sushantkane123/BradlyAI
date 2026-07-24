@@ -13,7 +13,7 @@ from rich.table import Table
 from rich.panel import Panel
 
 # Configure API URL
-BASE_URL = os.getenv("CYCRAFT_API_URL", "http://localhost:8000/api/v1")
+BASE_URL = os.getenv("BRADLY_API_URL", "http://localhost:8000/api/v1")
 console = Console()
 
 def display_header():
