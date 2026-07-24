@@ -75,7 +75,7 @@ def from_splunk(payload: dict) -> NormalizedAlert:
     if sev not in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
         sev = "MEDIUM"
     alert = NormalizedAlert(
-        id=f"SPL-{payload.get('sid', hashlib.md5(str(payload).encode()).hexdigest()[:10])}",
+        id=f"SPL-{payload.get('sid', hashlib.sha256(str(payload).encode()).hexdigest()[:16])}",
         source="splunk",
         title=payload.get("search_name", "Splunk Alert"),
         description=result.get("command") or payload.get("description", ""),
@@ -110,7 +110,7 @@ def from_wazuh(payload: dict) -> NormalizedAlert:
     mitre_ids = (rule.get("mitre", {}) or {}).get("id", [])
     mitre = ", ".join(mitre_ids) if mitre_ids else None
     alert = NormalizedAlert(
-        id=f"WAZ-{payload.get('id', hashlib.md5(str(payload).encode()).hexdigest()[:10])}",
+        id=f"WAZ-{payload.get('id', hashlib.sha256(str(payload).encode()).hexdigest()[:16])}",
         source="wazuh",
         title=rule.get("description", "Wazuh Alert"),
         description=rule.get("description", ""),
@@ -155,7 +155,7 @@ def from_jira(payload: dict) -> NormalizedAlert:
 def from_bradlyai(payload: dict) -> NormalizedAlert:
     """Normalize an alert produced by BradlyAI's own detection engine."""
     alert = NormalizedAlert(
-        id=f"B-{payload.get('id', hashlib.md5(str(payload).encode()).hexdigest()[:10])}",
+        id=f"B-{payload.get('id', hashlib.sha256(str(payload).encode()).hexdigest()[:16])}",
         source="bradlyai",
         title=payload.get("title", "BradlyAI Alert"),
         description=payload.get("description", payload.get("title", "")),
@@ -218,7 +218,7 @@ def _build_alert(source: str, payload: dict, *, prefix: str, identifier: Any, ti
                  description: Any = "", severity: Any = "MEDIUM", asset: Any = None,
                  source_ip: Any = None, user: Any = None, process: Any = None,
                  domain: Any = None, mitre: Any = None, timestamp: Any = None) -> NormalizedAlert:
-    safe_id = str(identifier or hashlib.md5(str(payload).encode()).hexdigest()[:10])
+    safe_id = str(identifier or hashlib.sha256(str(payload).encode()).hexdigest()[:16])
     alert = NormalizedAlert(
         id=f"{prefix}-{safe_id}", source=source,
         title=str(title or f"{source.title()} alert"), description=str(description or title or ""),

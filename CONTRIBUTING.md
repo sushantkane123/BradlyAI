@@ -1,6 +1,6 @@
 # Contributing to BradlyAI
 
-Welcome! We're excited you want to help make BradlyAI — the Driverless SOC platform — even better.
+Welcome! We're excited you want to help make BradlyAI — the evidence-first SOC operations platform — even better.
 
 ## 🚀 Quick Start
 

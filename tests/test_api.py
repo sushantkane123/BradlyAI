@@ -1,8 +1,20 @@
 """Pytest Integration Tests for BradlyAI FastAPI Backend"""
 from fastapi.testclient import TestClient
 from bradlyai.main import app
+from bradlyai.database import SessionLocal
+from bradlyai.services.bootstrap import run_all
 
 client = TestClient(app)
+
+
+def admin_headers():
+    # Explicit bootstrap keeps tests independent of TestClient lifespan behavior.
+    run_all(SessionLocal())
+    response = client.post("/api/v1/auth/login", json={
+        "username": "admin", "password": "Admin123!ChangeMe"
+    })
+    assert response.status_code == 200, response.text
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
 def test_read_main():
@@ -16,7 +28,7 @@ def test_health_check():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] in ("healthy", "degraded")
-    assert data["app"] == "BradlyAI - Driverless SOC & Automated Incident Response"
+    assert data["app"] == "BradlyAI - Evidence-First SOC Operations"
 
 
 def test_get_alerts():
@@ -38,7 +50,7 @@ def test_get_assets():
 
 
 def test_trigger_attack():
-    response = client.post("/api/v1/alerts/trigger-simulated-attack", json={"scenario": 1})
+    response = client.post("/api/v1/alerts/trigger-simulated-attack", headers=admin_headers(), json={"scenario": 1})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "INTERCEPTED"
@@ -81,15 +93,23 @@ def test_get_forensic_tree():
     assert data["rootProcess"]["name"] == "services.exe"
 
 
+def test_sensitive_system_routes_require_authentication():
+    assert client.get("/api/v1/system/config").status_code == 401
+    assert client.post("/api/v1/system/reset-database").status_code == 401
+    assert client.post("/api/v1/alerts/trigger-simulated-attack", json={"scenario": 0}).status_code == 401
+
+
 def test_system_config():
-    response = client.get("/api/v1/system/config")
+    response = client.get("/api/v1/system/config", headers=admin_headers())
     assert response.status_code == 200
     data = response.json()
-    assert data["app_name"] == "BradlyAI - Driverless SOC & Automated Incident Response"
+    assert data["app_name"] == "BradlyAI - Evidence-First SOC Operations"
+    assert "database_url" not in data
+    assert "database_driver" in data
 
 
 def test_system_reset():
-    response = client.post("/api/v1/system/reset-database")
+    response = client.post("/api/v1/system/reset-database", headers=admin_headers())
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "RESET"

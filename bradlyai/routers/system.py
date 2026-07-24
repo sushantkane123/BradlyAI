@@ -8,6 +8,7 @@ from typing import Optional
 from bradlyai.config import settings
 from bradlyai.database import get_db
 from bradlyai.models.alert import AlertModel
+from bradlyai.services.auth import require_permission
 
 logger = logging.getLogger("bradlyai.system")
 router = APIRouter(prefix="/system", tags=["System & Settings"])
@@ -20,7 +21,7 @@ class SystemConfigUpdate(BaseModel):
     live_simulation_active: Optional[bool] = None
 
 
-@router.get("/config")
+@router.get("/config", dependencies=[Depends(require_permission("settings", "read"))])
 def get_system_config():
     return {
         "app_name": settings.APP_NAME,
@@ -32,13 +33,14 @@ def get_system_config():
         "live_simulation_active": settings.LIVE_SIMULATION_WORKER_ACTIVE,
         "demo_data_enabled": settings.DEMO_DATA_ENABLED,
         "ingestion_default_mode": settings.INGESTION_DEFAULT_MODE,
-        "database_url": settings.DATABASE_URL,
+        # Do not expose database credentials or connection strings through the API.
+        "database_driver": settings.DATABASE_URL.split(":", 1)[0],
         "llm_provider": settings.LLM_PROVIDER,
         "rate_limit_enabled": settings.RATE_LIMIT_ENABLED,
     }
 
 
-@router.post("/config")
+@router.post("/config", dependencies=[Depends(require_permission("settings", "write"))])
 def update_system_config(req: SystemConfigUpdate):
     if req.openai_api_key is not None:
         settings.OPENAI_API_KEY = req.openai_api_key.strip() if req.openai_api_key.strip() else None
@@ -56,7 +58,7 @@ def update_system_config(req: SystemConfigUpdate):
     }
 
 
-@router.post("/reset-database")
+@router.post("/reset-database", dependencies=[Depends(require_permission("settings", "write"))])
 def reset_siem_database(db: Session = Depends(get_db)):
     """Clear all alerts and immediately re-seed the database."""
     from bradlyai.models.alert import AlertStorylineModel

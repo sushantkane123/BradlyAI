@@ -17,7 +17,7 @@ BASE_URL = os.getenv("BRADLY_API_URL", "http://localhost:8000/api/v1")
 console = Console()
 
 def display_header():
-    console.print("\n[bold cyan]🛡️  BradlyAI - Driverless SOC Operations Shell[/bold cyan]")
+    console.print("\n[bold cyan]🛡️  BradlyAI SOC Operations Shell[/bold cyan]")
     console.print("[green]Autonomous Cyber Security Management Protocol v1.0[/green]\n")
 
 def get_status():
@@ -91,7 +91,7 @@ def auto_remediate_asset(asset_id):
 def main():
     display_header()
     parser = argparse.ArgumentParser(description="BradlyAI Enterprise CLI Management Operations Tool")
-    parser.add_argument("--status", action="store_true", help="Display BradlyAI Driverless SOC Server Core Status")
+    parser.add_argument("--status", action="store_true", help="Display BradlyAI SOC Operations Server Status")
     parser.add_argument("--alerts", nargs="?", const="ALL", help="List Security Alerts. Optionally specify severity: CRITICAL, HIGH, MEDIUM, LOW")
     parser.add_argument("--trigger-attack", type=int, metavar="SCENARIO_ID", help="Trigger an advanced adversary cyber attack simulation (0=Ransomware, 1=Lateral Movement, 2=Exfiltration)")
     parser.add_argument("--remediate-asset", type=int, metavar="ASSET_ID", help="Execute Driverless AI autonomous auto-remediation on a specific target asset ID")

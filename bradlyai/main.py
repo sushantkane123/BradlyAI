@@ -1,4 +1,4 @@
-"""BradlyAI - Driverless SOC & Automated Incident Response Application Entrypoint"""
+"""BradlyAI - Evidence-First SOC Operations Application Entrypoint"""
 import logging
 import time
 import os
@@ -147,7 +147,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME, version=settings.APP_VERSION,
-    description="BradlyAI multi-model machine learning mesh backend API providing automated incident response and a true Driverless SOC experience.",
+    description="BradlyAI multi-model machine learning mesh backend API providing automated incident response and a evidence-first SOC operations experience.",
     docs_url="/docs", redoc_url="/redoc", lifespan=lifespan,
 )
 

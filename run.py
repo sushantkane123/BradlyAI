@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Top-level application runner for BradlyAI - Driverless SOC Application
+Top-level application runner for BradlyAI SOC Operations Application
 
 Usage examples:
     python run.py
@@ -22,7 +22,7 @@ def main():
 
     print(f"\n🛡️  Starting {settings.APP_NAME} ({settings.ENVIRONMENT} mode)...")
     print(f"⚡ Live Swagger UI Documentation: http://{args.host}:{args.port}/docs")
-    print(f"🌐 Full Autonomous Frontend Portal: http://{args.host}:{args.port}/\n")
+    print(f"🌐 SOC Operations Dashboard: http://{args.host}:{args.port}/\n")
 
     try:
         uvicorn.run(

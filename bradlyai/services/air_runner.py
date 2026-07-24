@@ -6,7 +6,7 @@ import asyncio
 
 class AIRRunner:
     """
-    Simulates Driverless SOC asynchronous pipeline execution
+    Simulates SOC workflow pipeline execution for local demos
     """
     
     @staticmethod

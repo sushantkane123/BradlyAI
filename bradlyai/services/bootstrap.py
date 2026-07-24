@@ -19,12 +19,19 @@ def bootstrap_admin_user(db: Session) -> None:
     """Create the bootstrap admin if no users exist."""
     if db.query(UserModel).count() > 0:
         return
+    password = settings.BOOTSTRAP_ADMIN_PASSWORD
+    if not password:
+        logger.error(
+            "No bootstrap administrator was created because BOOTSTRAP_ADMIN_PASSWORD is empty. "
+            "Set it in the deployment secret store, then restart BradlyAI."
+        )
+        return
     admin = UserModel(
         id=f"usr_{secrets.token_hex(6)}",
-        username="admin",
-        email="admin@bradlyai.local",
-        full_name="Default Admin",
-        password_hash=hash_password("Admin123!ChangeMe"),
+        username=settings.BOOTSTRAP_ADMIN_USERNAME,
+        email=settings.BOOTSTRAP_ADMIN_EMAIL,
+        full_name="Bootstrap Admin",
+        password_hash=hash_password(password),
         is_active=True, is_admin=True,
         tenant_id=settings.DEFAULT_TENANT_ID,
     )
@@ -35,7 +42,7 @@ def bootstrap_admin_user(db: Session) -> None:
         db.add(UserRoleModel(user_id=admin.id, role_id=admin_role.id,
                              tenant_id=settings.DEFAULT_TENANT_ID, granted_by="bootstrap"))
     db.commit()
-    logger.warning("Bootstrap admin user created: admin / Admin123!ChangeMe — CHANGE THIS PASSWORD.")
+    logger.warning("Bootstrap administrator created for user '%s'. Rotate the configured password after first sign-in.", settings.BOOTSTRAP_ADMIN_USERNAME)
 
 
 def run_all(db: Session) -> None:

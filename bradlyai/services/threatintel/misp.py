@@ -27,7 +27,7 @@ class MISPClient(BaseThreatIntel):
     def search_ip(self, ip: str) -> List[Dict[str, Any]]:
         if self._guard() or not settings.MISP_API_KEY or not settings.MISP_URL:
             return []
-        with httpx.Client(timeout=15, verify=False) as c:
+        with httpx.Client(timeout=15, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.post(f"{settings.MISP_URL.rstrip('/')}/attributes/restSearch",
                        headers=self._headers(),
                        json={"value": ip, "type": "ip-dst"})
