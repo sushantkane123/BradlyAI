@@ -3,7 +3,7 @@ version: '3.8'
 services:
   bradlyai-backend:
     build: .
-    container_name: cycraft_driverless_soc
+    container_name: bradlyai_driverless_soc
     ports:
       - "8000:8000"
     environment:
@@ -13,9 +13,9 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
     volumes:
-      - cycraft_db:/app/data
+      - bradlyai_db:/app/data
     restart: unless-stopped
 
 volumes:
-  cycraft_db:
-    name: cycraft_db_volume
+  bradlyai_db:
+    name: bradlyai_db_volume
