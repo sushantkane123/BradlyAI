@@ -148,8 +148,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.APP_NAME, version=settings.APP_VERSION,
-    description="BradlyAI multi-model machine learning mesh backend API providing automated incident response and a true Driverless SOC experience.",
+    title="BradlyAI - Autonomous SOC (Dropzone-style)",
+    version=settings.APP_VERSION,
+    description="Agentic SOC platform: autonomous L1 investigation using OSCAR methodology. No human in the critical path - every alert gets a recursive, evidence-driven investigation across EDR, Identity, Network, and Threat Intel connectors.",
     docs_url="/docs", redoc_url="/redoc", lifespan=lifespan,
 )
 
@@ -165,7 +166,7 @@ async def add_process_time_header(request: Request, call_next):
     response = await call_next(request)
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = f"{process_time:.4f}s"
-    response.headers["X-Autonomous-SOC"] = "BradlyAI Multi-Model Active Engine"
+    response.headers["X-Autonomous-SOC"] = "BradlyAI - Agentic SOC (Dropzone-style OSCAR)"
     return response
 
 
@@ -249,6 +250,13 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 def serve_frontend_portal():
+    """Main dashboard — Dropzone-style autonomous SOC."""
+    return FileResponse(os.path.join(STATIC_DIR, "dropzone.html"))
+
+
+@app.get("/classic")
+def serve_classic_dashboard():
+    """Original BradlyAI dashboard (legacy)."""
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 

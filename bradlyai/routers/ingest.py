@@ -106,9 +106,43 @@ def _process_event(db: Session, request: EventIngestRequest, mode_override: Opti
     # AutoCloser records the audit event. In shadow mode it records SHADOW_CLOSE but
     # does not close local or external alerts; in active mode it follows Wazuh policy.
     action = auto_closer.apply(decision, alert_id_from_db=alert.id)
+
+    # ── Dropzone Auto-Investigation: runs on EVERY ingested alert ──
+    dropzone_inv = None
+    try:
+        import asyncio
+        from bradlyai.services.dropzone_agent import auto_investigate_alert
+        from bradlyai.database import SessionLocal
+        dz_db = SessionLocal()
+        try:
+            dz_alert = dz_db.query(AlertModel).filter(AlertModel.id == alert.id).first()
+            if dz_alert:
+                loop = asyncio.new_event_loop()
+                dz_result = loop.run_until_complete(auto_investigate_alert(dz_alert, dz_db))
+                loop.close()
+                dropzone_inv = {
+                    "investigation_id": dz_result.investigation_id,
+                    "disposition": dz_result.disposition,
+                    "confidence": dz_result.confidence,
+                    "summary": dz_result.summary,
+                }
+                # Update alert status based on Dropzone disposition
+                if dz_result.disposition == "BENIGN":
+                    alert.status = "AUTO_CLOSED"
+                elif dz_result.disposition == "MALICIOUS":
+                    alert.status = "ESCALATED"
+                elif dz_result.disposition == "SUSPICIOUS":
+                    alert.status = "PENDING_REVIEW"
+                db.commit()
+        finally:
+            dz_db.close()
+    except Exception as dz_err:
+        logger.warning(f"Dropzone auto-investigation failed for {alert.id}: {dz_err}")
+
     logger.info(
-        "Ingested source=%s alert=%s mode=%s decision=%s confidence=%.2f",
+        "Ingested source=%s alert=%s mode=%s decision=%s confidence=%.2f dropzone=%s",
         normalized.source, alert.id, mode, decision.decision, decision.confidence,
+        dropzone_inv["disposition"] if dropzone_inv else "N/A",
     )
     return {
         "stored": True,
@@ -117,6 +151,7 @@ def _process_event(db: Session, request: EventIngestRequest, mode_override: Opti
         "alert": normalized.to_dict(),
         "decision": decision.to_dict(),
         "action": action,
+        "dropzone_investigation": dropzone_inv,
     }
 
 

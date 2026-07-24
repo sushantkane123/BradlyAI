@@ -2,11 +2,11 @@
 Dropzone-style Autonomous SOC L1 Investigation Agent.
 
 Mirrors Dropzone AI's OSCAR methodology with recursive, evidence-driven reasoning:
-  O — Obtain information: connect to security tools and receive alerts
-  S — Strategize and plan: formulate multiple hypotheses of why the alert fired
-  C — Collect evidence: query security tools just as a human analyst would
-  A — Analyze: replicate Tier 1 SOC analyst skills recursively
-  R — Report: compose a summary with conclusion, confidence, and raw evidence links
+  O -- Obtain information: connect to security tools and receive alerts
+  S -- Strategize and plan: formulate multiple hypotheses of why the alert fired
+  C -- Collect evidence: query security tools just as a human analyst would
+  A -- Analyze: replicate Tier 1 SOC analyst skills recursively
+  R -- Report: compose a summary with conclusion, confidence, and raw evidence links
 
 Key Dropzone-inspired behaviors:
 - NO human in the critical path for L1 triage
@@ -14,7 +14,7 @@ Key Dropzone-inspired behaviors:
 - Recursive reasoning: keeps collecting evidence and formulating hypotheses
   until reaching a final disposition
 - Glass-box transparency: every query, finding, and decision step is auditable
-- Pre-trained reasoning patterns — no playbooks or code required per alert type
+- Pre-trained reasoning patterns -- no playbooks or code required per alert type
 - Connector-first: queries SIEM, EDR, cloud, identity, threat intel tools actively
 """
 
@@ -91,9 +91,9 @@ PHISHING_PATTERNS = {
     "indicators": ["suspicious email", "phishing", "spearphishing", "credential phishing",
                    "malicious attachment", "malicious link", "spoofed sender"],
     "primary_hypotheses": [
-        "Targeted phishing attack — user received a crafted email with malicious link/attachment",
-        "Credential harvesting attempt — fake login page designed to steal credentials",
-        "BEC/impersonation — attacker spoofing executive or partner identity",
+        "Targeted phishing attack -- user received a crafted email with malicious link/attachment",
+        "Credential harvesting attempt -- fake login page designed to steal credentials",
+        "BEC/impersonation -- attacker spoofing executive or partner identity",
     ],
     "key_evidence": ["email headers", "attachment hash", "URL reputation", "user click history",
                      "forwarding rules created", "login geo-anomalies post-delivery"],
@@ -105,9 +105,9 @@ MALWARE_PATTERNS = {
     "indicators": ["malware", "trojan", "ransomware", "backdoor", "dropper", "cryptominer",
                    "suspicious process", "powershell encoded", "wmic", "schtasks"],
     "primary_hypotheses": [
-        "Malware execution — unknown binary or script executed on endpoint",
-        "Living-off-the-land — attacker using built-in Windows tools for execution",
-        "Fileless malware — code executing in memory without writing to disk",
+        "Malware execution -- unknown binary or script executed on endpoint",
+        "Living-off-the-land -- attacker using built-in Windows tools for execution",
+        "Fileless malware -- code executing in memory without writing to disk",
     ],
     "key_evidence": ["process tree", "network connections", "file hashes", "registry changes",
                      "scheduled tasks created", "service installations"],
@@ -119,9 +119,9 @@ BRUTE_FORCE_PATTERNS = {
     "indicators": ["brute force", "password spray", "credential stuffing", "multiple failed logins",
                    "account lockout", "impossible travel"],
     "primary_hypotheses": [
-        "External brute-force attack — attacker attempting password guessing from external IP",
-        "Internal lateral movement — compromised account attempting to expand access",
-        "Misconfigured service/application — automated process using expired credentials",
+        "External brute-force attack -- attacker attempting password guessing from external IP",
+        "Internal lateral movement -- compromised account attempting to expand access",
+        "Misconfigured service/application -- automated process using expired credentials",
     ],
     "key_evidence": ["sign-in logs with source IPs", "account lockout events", "MFA prompt history",
                      "geo-location of sign-in attempts", "successful sign-ins after failures"],
@@ -134,8 +134,8 @@ PRIVILEGE_ESCALATION_PATTERNS = {
                    "suspicious group membership", "domain admin"],
     "primary_hypotheses": [
         "Attacker escalating privileges after initial compromise",
-        "Insider threat — authorized user attempting unauthorized privilege gain",
-        "Misconfigured automation — DevOps pipeline or script with excessive permissions",
+        "Insider threat -- authorized user attempting unauthorized privilege gain",
+        "Misconfigured automation -- DevOps pipeline or script with excessive permissions",
     ],
     "key_evidence": ["group membership changes", "new admin account creation", "token/credential access",
                      "sensitive command execution", "PAM solution audit logs"],
@@ -147,9 +147,9 @@ DATA_EXFIL_PATTERNS = {
     "indicators": ["data exfiltration", "data exfil", "large upload", "unusual outbound traffic",
                    "DNS tunneling", "archive created", "staging"],
     "primary_hypotheses": [
-        "Data exfiltration in progress — sensitive data being transferred to external destination",
-        "Legitimate backup or sync job — automated process moving data as expected",
-        "Shadow IT — employee using unauthorized cloud storage service",
+        "Data exfiltration in progress -- sensitive data being transferred to external destination",
+        "Legitimate backup or sync job -- automated process moving data as expected",
+        "Shadow IT -- employee using unauthorized cloud storage service",
     ],
     "key_evidence": ["outbound network volume by destination", "files accessed before transfer",
                      "DNS query patterns", "archive/packing behavior", "cloud storage API calls"],
@@ -161,9 +161,9 @@ SCANNER_PATTERNS = {
     "indicators": ["scanner", "nessus", "qualys", "vulnerability scan", "port scan", "healthcheck",
                    "heartbeat", "monitoring", "inventory scan", "patch management"],
     "primary_hypotheses": [
-        "Authorized vulnerability scanner — scheduled security assessment activity",
-        "IT monitoring/healthcheck — infrastructure monitoring tool",
-        "Unauthorized reconnaissance — attacker performing network discovery",
+        "Authorized vulnerability scanner -- scheduled security assessment activity",
+        "IT monitoring/healthcheck -- infrastructure monitoring tool",
+        "Unauthorized reconnaissance -- attacker performing network discovery",
     ],
     "key_evidence": ["source IP ownership (internal scanner subnet?)", "scanning pattern/timing",
                      "organizational context (scheduled scan window?)", "target coverage"],
@@ -326,7 +326,7 @@ class DropzoneAutonomousAgent:
 
     def _phase_obtain(self, alert: AlertModel, alert_type: str,
                       entities: dict[str, Any]) -> list[OSCARStep]:
-        """O — Obtain information: normalize the alert, extract entities."""
+        """O -- Obtain information: normalize the alert, extract entities."""
         steps = []
         start = time.time()
 
@@ -371,16 +371,16 @@ class DropzoneAutonomousAgent:
 
     def _phase_strategize(self, alert: AlertModel, alert_type: str,
                           entities: dict[str, Any]) -> tuple[list[OSCARStep], list[Hypothesis]]:
-        """S — Strategize: formulate multiple hypotheses, plan evidence collection."""
+        """S -- Strategize: formulate multiple hypotheses, plan evidence collection."""
         steps = []
         hypotheses = []
         pattern = ALERT_PATTERNS.get(alert_type, {})
 
         # Build hypotheses from pre-trained patterns
         for i, hyp_text in enumerate(pattern.get("primary_hypotheses", [
-            "Unknown threat activity — insufficient pattern match for classification",
-            "False positive — benign activity misclassified by detection rule",
-            "Policy violation — authorized but non-compliant activity",
+            "Unknown threat activity -- insufficient pattern match for classification",
+            "False positive -- benign activity misclassified by detection rule",
+            "Policy violation -- authorized but non-compliant activity",
         ])):
             likelihood = "high" if i == 0 else ("medium" if i == 1 else "low")
             hypotheses.append(Hypothesis(
@@ -453,7 +453,7 @@ class DropzoneAutonomousAgent:
                               entities: dict[str, Any],
                               hypotheses: list[Hypothesis],
                               db: Session) -> list[OSCARStep]:
-        """C — Collect evidence: query security tools actively."""
+        """C -- Collect evidence: query security tools actively."""
         steps = []
         pattern = ALERT_PATTERNS.get(alert_type, {})
 
@@ -608,9 +608,9 @@ class DropzoneAutonomousAgent:
                        entities: dict[str, Any], hypotheses: list[Hypothesis],
                        collect_steps: list[OSCARStep],
                        recursion_depth: int = 0) -> tuple[list[OSCARStep], list[Hypothesis]]:
-        """A — Analyze: evaluate hypotheses recursively against evidence.
+        """A -- Analyze: evaluate hypotheses recursively against evidence.
 
-        This is the recursive reasoning core — Dropzone's key differentiator.
+        This is the recursive reasoning core -- Dropzone's key differentiator.
         After evaluating evidence, it identifies gaps, formulates new hypotheses,
         and continues until confidence > threshold or max depth reached.
         """
@@ -702,7 +702,7 @@ class DropzoneAutonomousAgent:
         if primary_conf < self.confidence_threshold and recursion_depth < self.max_recursion_depth:
             steps.append(OSCARStep(
                 phase="ANALYZE", step_number=len(steps) + 1,
-                task="Recursive analysis — confidence below threshold, deepening investigation",
+                task="Recursive analysis -- confidence below threshold, deepening investigation",
                 status="completed",
                 finding=f"Primary hypothesis confidence ({primary_conf:.0%}) below threshold "
                         f"({self.confidence_threshold:.0%}). Deepening analysis (depth {recursion_depth + 1}/{self.max_recursion_depth}).",
@@ -758,7 +758,7 @@ class DropzoneAutonomousAgent:
     def _phase_report(self, alert: AlertModel, alert_type: str,
                       hypotheses: list[Hypothesis],
                       all_steps: list[OSCARStep]) -> tuple[list[OSCARStep], str, float, str]:
-        """R — Report: compose investigation summary with disposition.
+        """R -- Report: compose investigation summary with disposition.
 
         Returns (report_steps, disposition, confidence, summary)
         """
@@ -859,7 +859,7 @@ class DropzoneAutonomousAgent:
             ]
         else:  # BENIGN
             recommended = [
-                "AUTO-CLOSE CANDIDATE — alert appears to be benign/non-threatening",
+                "AUTO-CLOSE CANDIDATE -- alert appears to be benign/non-threatening",
                 "Add to organizational context if this is recurring legitimate activity",
                 "No immediate action required",
             ]
@@ -881,7 +881,7 @@ class DropzoneAutonomousAgent:
     async def investigate(self, alert: AlertModel, db: Session | None = None) -> DropzoneInvestigation:
         """Run a full autonomous OSCAR investigation on an alert.
 
-        This is the main entry point — mirrors Dropzone AI's autonomous investigation
+        This is the main entry point -- mirrors Dropzone AI's autonomous investigation
         that runs on every alert without human initiation.
         """
         close_db = False
@@ -903,7 +903,7 @@ class DropzoneAutonomousAgent:
             # Phase 2: STRATEGIZE
             strategize_steps, hypotheses = self._phase_strategize(alert, alert_type, entities)
 
-            # Phase 3: COLLECT (async — queries external tools)
+            # Phase 3: COLLECT (async -- queries external tools)
             collect_steps = await self._phase_collect(alert, alert_type, entities, hypotheses, db)
 
             # Phase 4: ANALYZE (recursive)
@@ -1029,7 +1029,7 @@ class DropzoneAutonomousAgent:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Auto-investigation dispatcher — runs on every alert
+# Auto-investigation dispatcher -- runs on every alert
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Singleton
@@ -1041,7 +1041,7 @@ async def auto_investigate_alert(alert: AlertModel, db: Session | None = None) -
     Automatically investigate every alert that enters the system.
 
     This mirrors Dropzone AI's behavior: no human needed to initiate
-    an investigation — every alert gets the full OSCAR treatment.
+    an investigation -- every alert gets the full OSCAR treatment.
     """
     return await dropzone_agent.investigate(alert, db)
 

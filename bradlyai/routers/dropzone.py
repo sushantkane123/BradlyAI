@@ -33,7 +33,7 @@ from bradlyai.services.dropzone_agent import (
 from bradlyai.services.alert_normalizer import normalize
 
 logger = logging.getLogger("bradlyai.dropzone_router")
-router = APIRouter(prefix="/dropzone", tags=["Dropzone AI — Autonomous SOC"])
+router = APIRouter(prefix="/dropzone", tags=["Dropzone AI - Autonomous SOC"])
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
