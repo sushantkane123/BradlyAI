@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Top-level development runner for BradlyAI - Driverless SOC Application
+Top-level application runner for BradlyAI - Driverless SOC Application
 
 Usage examples:
     python run.py
