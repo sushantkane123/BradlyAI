@@ -51,7 +51,7 @@ class RealDetectionEngine:
     def detect(self, event: Dict[str, Any]) -> Optional[RealAlert]:
         message = (str(event.get("message", "")) + " " + str(event.get("raw", ""))).lower()
         source = event.get("source", event.get("host", "unknown-host"))
-        ip = event.get("ip", event.get("src_ip", "0.0.0.0"))
+        ip = event.get("ip", event.get("src_ip", ""))
         now = datetime.now(timezone.utc)
         for rule in self.rules:
             for pattern in rule.patterns:

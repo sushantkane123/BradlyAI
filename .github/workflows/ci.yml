@@ -1,4 +1,4 @@
-name: BradlyAI Driverless SOC CI/CD Pipeline
+name: BradlyAI SOC Operations CI/CD Pipeline
 
 on:
   push:
@@ -24,6 +24,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
 
+    - name: Set up Node for dashboard syntax checks
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
     - name: Install System Dependencies
       run: |
         sudo apt-get update
@@ -33,10 +38,19 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install pip-audit bandit
 
-    - name: Execute Automated Test Suite (Pytest)
-      run: |
-        pytest --maxfail=1 --disable-warnings -v
+    - name: Run dependency vulnerability audit
+      run: pip-audit -r requirements.txt
+
+    - name: Run high-severity source security checks
+      run: bandit -r bradlyai -q -lll
+
+    - name: Validate dashboard JavaScript syntax
+      run: node --check bradlyai/static/app.js
+
+    - name: Execute automated test suite
+      run: pytest --maxfail=1 --disable-warnings -v
 
   docker-verify:
     name: Verify Multi-Stage Docker Build
@@ -54,6 +68,6 @@ jobs:
       with:
         context: .
         push: false
-        tags: bradlyai_driverless_soc:latest
+        tags: bradlyai-soc:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max

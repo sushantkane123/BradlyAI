@@ -205,9 +205,11 @@ function renderOverview() {
   const bySeverity = ['critical', 'high', 'medium', 'low'].map(severity => ({ severity, count: alerts.filter(alert => severityClass(alert.severity) === severity).length }));
   const maxSeverity = Math.max(1, ...bySeverity.map(item => item.count));
   const l1Mode = stats.current_mode ? `${displayStatus(stats.current_mode)} mode` : 'Policy mode unavailable';
-  const dataMode = state.systemConfig?.demo_data_enabled
-    ? '<div class="data-mode-banner demo"><strong>Demo data mode is enabled.</strong><span>Seeded showcase alerts may be visible. Do not use this workspace for client operations.</span></div>'
-    : '<div class="data-mode-banner live"><strong>Live ingestion mode.</strong><span>Demo data is disabled. Alerts shown here originate from configured SIEM, XDR, EDR, or replay sources.</span></div>';
+  const dataMode = !state.systemConfig
+    ? ''
+    : state.systemConfig.demo_data_enabled
+      ? '<div class="data-mode-banner demo"><strong>Demo data mode is enabled.</strong><span>Seeded showcase alerts may be visible. Do not use this workspace for client operations.</span></div>'
+      : '<div class="data-mode-banner live"><strong>Live ingestion mode.</strong><span>Demo data is disabled. Alerts shown here originate from configured SIEM, XDR, EDR, or replay sources.</span></div>';
   return `${pageHeader('Security overview', 'Prioritize investigation work, review automated decisions, and monitor service health.', `<span>Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`)}
     ${dataMode}
     ${errorNotice(['alerts', 'l1Stats', 'health'])}

@@ -118,7 +118,7 @@ class IncidentManager:
             source="wazuh",
             source_alert_id=wazuh_alert.get("id", ""),
             source_agent=agent.get("name", "unknown"),
-            source_ip=agent.get("ip", "0.0.0.0"),
+            source_ip=agent.get("ip", ""),
             mitre_technique=", ".join(mitre_ids) if mitre_ids else "TBD",
             created_at=now,
             updated_at=now,

@@ -21,7 +21,7 @@ router = APIRouter(prefix="/chat", tags=["AI Copilot"])
 
 async def generate_ai_stream(user_query: str, context_data: str) -> str:
     system_prompt = (
-        "You are the BradlyAI Cyber-AI Copilot, the brain of a Driverless SOC. "
+        "You are the BradlyAI Cyber-AI Copilot, an evidence-first SOC investigation assistant. "
         "You have access to real-time security alerts. Be precise, technical, and actionable. "
         "If the user asks about the network, refer to the provided context alerts. "
         "Always conclude with a suggested remediation step."
