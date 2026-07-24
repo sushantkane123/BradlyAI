@@ -85,7 +85,7 @@ class CyberAudio {
     }
 }
 
-class CyCraftApp {
+class BradlyAIApp {
     constructor() {
         this.currentTab = 'dashboard';
         this.currentAlertFilter = 'ALL';
@@ -885,7 +885,7 @@ class CyCraftApp {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `cycraft_siem_evidence_${alertObj.id}.json`;
+        a.download = `bradlyai_siem_evidence_${alertObj.id}.json`;
         a.click();
         URL.revokeObjectURL(url);
     }
