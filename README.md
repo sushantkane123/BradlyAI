@@ -427,3 +427,7 @@ INGESTION_DEFAULT_MODE=shadow
 ```
 
 BradlyAI accepts real event envelopes from Wazuh, Splunk, Microsoft Sentinel, Microsoft Defender for Endpoint, CrowdStrike Falcon, Elastic, generic SIEM, XDR, EDR, and custom webhook sources at `POST /api/v1/ingest/events`. Sanitized replay fixtures and the source contract are documented in [docs_REAL_DATA_MODE.md](docs_REAL_DATA_MODE.md).
+
+## Evidence-first SOC investigation agent
+
+The SOC investigation agent follows a structured human-style workflow: validate source evidence, correlate local history, identify required endpoint/identity/network evidence, generate hypotheses, and recommend `ESCALATE`, `REVIEW`, or an `AUTO_CLOSE_CANDIDATE`. It never performs containment directly. See [docs_SOC_INVESTIGATION_AGENT.md](docs_SOC_INVESTIGATION_AGENT.md) for the workflow and API.

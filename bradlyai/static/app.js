@@ -454,7 +454,7 @@ async function openAlert(alertId) {
     try { rawEventText = JSON.stringify(JSON.parse(alert.raw_event), null, 2); } catch (_) { rawEventText = String(alert.raw_event); }
     rawEventText = rawEventText.slice(0, 12000);
   }
-  drawer.innerHTML = `<div class="drawer-header"><div><span class="severity ${severityClass(alert.severity)}">${escapeHtml(displayStatus(alert.severity))}</span><h2 id="drawer-title">${escapeHtml(alert.title || alert.id)}</h2><span class="entity-subtitle">${escapeHtml(alert.id)}</span></div><button class="icon-button" id="close-drawer" aria-label="Close alert detail">×</button></div><div class="drawer-body"><div class="drawer-actions"><button class="button secondary small" id="copy-alert-id">Copy alert ID</button><button class="button secondary small" id="create-case-from-alert" ${state.user ? '' : 'disabled title="Sign in to create a case"'}>Create case</button></div><section><h3 class="section-title">Alert summary</h3><dl class="detail-grid"><div><dt>Status</dt><dd><span class="status-badge ${statusClass(alert.status)}">${escapeHtml(displayStatus(alert.status))}</span></dd></div><div><dt>Confidence</dt><dd>${escapeHtml(formatConfidence(alert.ai_confidence))}</dd></div><div><dt>Asset</dt><dd>${escapeHtml(alert.endpoint || '—')}</dd></div><div><dt>Source IP</dt><dd>${escapeHtml(alert.ip || '—')}</dd></div><div><dt>Source</dt><dd>${escapeHtml(displayStatus(alert.source || 'Unknown'))}</dd></div><div><dt>MITRE ATT&CK</dt><dd>${escapeHtml(alert.mitre || 'Not mapped')}</dd></div><div><dt>Observed</dt><dd>${escapeHtml(formatDate(alert.timestamp))}</dd></div></dl></section><section><h3 class="section-title">Investigation timeline</h3>${Array.isArray(alert.storyline) && alert.storyline.length ? `<ol class="timeline">${alert.storyline.map(item => `<li><time>${escapeHtml(item.time || '')}</time>${escapeHtml(item.event || '')}</li>`).join('')}</ol>` : `<div class="drawer-note">No timeline evidence has been recorded for this alert.</div>`}</section><section><h3 class="section-title">L1 decision evidence</h3>${entries.length ? entries.map(entry => `<div class="audit-item"><strong>${escapeHtml(displayStatus(entry.decision))} · ${escapeHtml(formatConfidence(entry.confidence))}</strong><span>${escapeHtml(entry.reason || entry.primary_signal || 'Decision recorded')} · ${escapeHtml(formatDate(entry.timestamp))}</span></div>`).join('') : `<div class="drawer-note">No L1 decision evidence is associated with this alert yet.</div>`}</section>${rawEventText ? `<section><h3 class="section-title">Original source event</h3><pre class="raw-event">${escapeHtml(rawEventText)}</pre></section>` : ''}</div>`;
+  drawer.innerHTML = `<div class="drawer-header"><div><span class="severity ${severityClass(alert.severity)}">${escapeHtml(displayStatus(alert.severity))}</span><h2 id="drawer-title">${escapeHtml(alert.title || alert.id)}</h2><span class="entity-subtitle">${escapeHtml(alert.id)}</span></div><button class="icon-button" id="close-drawer" aria-label="Close alert detail">×</button></div><div class="drawer-body"><div class="drawer-actions"><button class="button secondary small" id="copy-alert-id">Copy alert ID</button><button class="button secondary small" id="run-investigation" ${state.user ? '' : 'disabled title="Sign in to run an investigation"'}>Run investigation</button><button class="button secondary small" id="create-case-from-alert" ${state.user ? '' : 'disabled title="Sign in to create a case"'}>Create case</button></div><section><h3 class="section-title">Alert summary</h3><dl class="detail-grid"><div><dt>Status</dt><dd><span class="status-badge ${statusClass(alert.status)}">${escapeHtml(displayStatus(alert.status))}</span></dd></div><div><dt>Confidence</dt><dd>${escapeHtml(formatConfidence(alert.ai_confidence))}</dd></div><div><dt>Asset</dt><dd>${escapeHtml(alert.endpoint || '—')}</dd></div><div><dt>Source IP</dt><dd>${escapeHtml(alert.ip || '—')}</dd></div><div><dt>Source</dt><dd>${escapeHtml(displayStatus(alert.source || 'Unknown'))}</dd></div><div><dt>MITRE ATT&CK</dt><dd>${escapeHtml(alert.mitre || 'Not mapped')}</dd></div><div><dt>Observed</dt><dd>${escapeHtml(formatDate(alert.timestamp))}</dd></div></dl></section><section><h3 class="section-title">Investigation timeline</h3>${Array.isArray(alert.storyline) && alert.storyline.length ? `<ol class="timeline">${alert.storyline.map(item => `<li><time>${escapeHtml(item.time || '')}</time>${escapeHtml(item.event || '')}</li>`).join('')}</ol>` : `<div class="drawer-note">No timeline evidence has been recorded for this alert.</div>`}</section><section><h3 class="section-title">L1 decision evidence</h3>${entries.length ? entries.map(entry => `<div class="audit-item"><strong>${escapeHtml(displayStatus(entry.decision))} · ${escapeHtml(formatConfidence(entry.confidence))}</strong><span>${escapeHtml(entry.reason || entry.primary_signal || 'Decision recorded')} · ${escapeHtml(formatDate(entry.timestamp))}</span></div>`).join('') : `<div class="drawer-note">No L1 decision evidence is associated with this alert yet.</div>`}</section>${rawEventText ? `<section><h3 class="section-title">Original source event</h3><pre class="raw-event">${escapeHtml(rawEventText)}</pre></section>` : ''}</div>`;
   drawer.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
   showScrim(true);
@@ -462,9 +462,32 @@ async function openAlert(alertId) {
   $('#copy-alert-id').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(String(alert.id)); toast('Alert ID copied', 'success'); } catch (_) { toast('Could not copy alert ID', 'error'); }
   });
+  const investigate = $('#run-investigation');
+  if (investigate) investigate.addEventListener('click', () => runInvestigation(alert));
   const createCase = $('#create-case-from-alert');
   if (createCase) createCase.addEventListener('click', () => openCaseCreateModal(alert));
 }
+
+async function runInvestigation(alert) {
+  if (!state.user) return openLogin();
+  const button = $('#run-investigation');
+  if (button) { button.disabled = true; button.textContent = 'Investigating…'; }
+  try {
+    const result = await request(`/agent/alerts/${encodeURIComponent(alert.id)}/investigate`, { method: 'POST' });
+    const existing = $('#agent-investigation-result');
+    if (existing) existing.remove();
+    const panel = document.createElement('section');
+    panel.id = 'agent-investigation-result';
+    panel.innerHTML = `<h3 class="section-title">SOC investigation agent</h3><div class="drawer-note"><strong>${escapeHtml(displayStatus(result.recommendation))} · ${escapeHtml(result.confidence)}</strong><br>${escapeHtml(result.summary)}</div><h3 class="section-title" style="margin-top:16px">Evidence collected</h3>${(result.evidence || []).map(item => `<div class="audit-item"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.finding)} · ${escapeHtml(item.source)}</span></div>`).join('')}<h3 class="section-title" style="margin-top:16px">Investigation plan</h3><ol class="timeline">${(result.plan || []).map(item => `<li><time>${escapeHtml(displayStatus(item.status))}</time>${escapeHtml(item.task)} — ${escapeHtml(item.reason)}</li>`).join('')}</ol>`;
+    $('.drawer-body').append(panel);
+    toast('Investigation completed', 'success');
+  } catch (failure) {
+    toast(failure.message, 'error');
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'Run investigation'; }
+  }
+}
+
 
 function closeDrawer() {
   const drawer = $('#alert-drawer');
