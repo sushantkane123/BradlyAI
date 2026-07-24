@@ -12,6 +12,7 @@ from bradlyai.models.case import CaseModel, CaseNoteModel, CaseEvidenceModel
 from bradlyai.models.playbook import PlaybookModel, PlaybookRunModel
 from bradlyai.models.notification_log import NotificationLogModel
 from bradlyai.models.sigma_rule import SigmaRuleModel
+from bradlyai.models.investigation import InvestigationModel
 
 __all__ = [
     "AlertModel", "AlertStorylineModel",
@@ -27,4 +28,5 @@ __all__ = [
     "PlaybookModel", "PlaybookRunModel",
     "NotificationLogModel",
     "SigmaRuleModel",
+    "InvestigationModel",
 ]

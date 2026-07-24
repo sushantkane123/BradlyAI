@@ -55,6 +55,7 @@ def run_migrations(engine: Engine) -> dict:
     from bradlyai.models.playbook import PlaybookModel, PlaybookRunModel
     from bradlyai.models.notification_log import NotificationLogModel
     from bradlyai.models.sigma_rule import SigmaRuleModel
+    from bradlyai.models.investigation import InvestigationModel
 
     added = []
 
@@ -72,6 +73,7 @@ def run_migrations(engine: Engine) -> dict:
         (PlaybookModel, "playbooks"), (PlaybookRunModel, "playbook_runs"),
         (NotificationLogModel, "notification_log"),
         (SigmaRuleModel, "sigma_rules"),
+        (InvestigationModel, "investigations"),
         (UserModel, "users"), (RoleModel, "roles"),
         (PermissionModel, "permissions"), (UserRoleModel, "user_roles"),
         (ApiKeyModel, "api_keys"), (TenantModel, "tenants"),

@@ -21,7 +21,7 @@ from bradlyai.routers import (
     integration, l1_agent,
     # NEW competitive-hardening routers
     auth, notifications, edr, network, identity, itsm,
-    threatintel, sigma, cases, playbooks, reports, metrics,
+    threatintel, sigma, cases, playbooks, reports, metrics, agent,
 )
 from bradlyai.services.live_simulation_worker import live_worker
 
@@ -215,6 +215,7 @@ app.include_router(sigma.router, prefix=api_prefix)
 app.include_router(cases.router, prefix=api_prefix)
 app.include_router(playbooks.router, prefix=api_prefix)
 app.include_router(reports.router, prefix=api_prefix)
+app.include_router(agent.router, prefix=api_prefix)
 app.include_router(metrics.router)
 
 

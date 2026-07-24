@@ -74,6 +74,9 @@ def _store_normalized_event(db: Session, normalized: NormalizedAlert) -> AlertMo
     alert.mitre = normalized.mitre or ""
     alert.source = normalized.source
     alert.signature = normalized.signature
+    # A single-tenant local/lab deployment uses the configured default tenant;
+    # production connectors should set the same field from authenticated routing.
+    alert.tenant_id = alert.tenant_id or settings.DEFAULT_TENANT_ID
     alert.raw_event = json.dumps(normalized.raw, default=str, separators=(",", ":"))
     if not alert.ai_confidence:
         alert.ai_confidence = "Pending"
