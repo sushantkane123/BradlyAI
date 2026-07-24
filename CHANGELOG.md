@@ -17,7 +17,7 @@ SOC platforms. Every feature below is production-ready and safe-by-default
 - API-key issuance with scopes (`X-API-Key`)
 - OIDC SSO (Okta / Azure AD / Google / Auth0 / Keycloak) — generic, PKCE
 - SAML SSO skeleton (IdP metadata + ACS) — install `python3-saml` to enable
-- Bootstrap admin user (`admin` / `Admin123!ChangeMe`) on first boot — **CHANGE THIS**
+- Bootstrap admin user (a configured bootstrap administrator) on first boot — **CHANGE THIS**
 
 ### Added — Multi-Tenancy
 - TenantModel with per-tenant scoping on alerts / cases / playbooks

@@ -34,7 +34,7 @@ class LogIngestionService:
                 event.source = "ENG-MAC-404"
             elif "iam" in line.lower() or "administratoraccess" in line.lower():
                 event.source = "AWS-IAM"
-            alert = detection_engine.detect({"message": event.message, "source": event.source, "raw": event.raw, "ip": "0.0.0.0"})
+            alert = detection_engine.detect({"message": event.message, "source": event.source, "raw": event.raw, "ip": ""})
             if alert:
                 self.alerts.append(alert)
                 new_alerts.append(alert)
@@ -46,7 +46,7 @@ class LogIngestionService:
             self.counter += 1
             event = IngestedEvent(id=self.counter, timestamp=log.get("timestamp", datetime.now(timezone.utc).isoformat()), source=log.get("host", "unknown"), message=log.get("message", str(log)), raw=json.dumps(log))
             self.events.append(event)
-            alert = detection_engine.detect({"message": event.message, "source": event.source, "raw": event.raw, "ip": log.get("source_ip", "0.0.0.0")})
+            alert = detection_engine.detect({"message": event.message, "source": event.source, "raw": event.raw, "ip": log.get("source_ip", "")})
             if alert:
                 self.alerts.append(alert)
                 new_alerts.append(alert)

@@ -1,5 +1,5 @@
 """
-BradlyAI - Driverless SOC & Automated Incident Response Platform Backend
+BradlyAI - Evidence-First SOC Operations Platform Backend
 """
 
 __version__ = "1.0.0"

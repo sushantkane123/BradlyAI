@@ -5,7 +5,7 @@ single point of integration for many firewalls.
 """
 import logging
 from typing import Any, Dict, Optional
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
 
 import httpx
 
@@ -25,7 +25,7 @@ class PaloAltoNetwork(BaseNetwork):
             "key": settings.PALOALTO_API_KEY,
             "xpath": xpath, "element": element,
         }
-        with httpx.Client(timeout=15, verify=False) as c:
+        with httpx.Client(timeout=15, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.get(url, params=params)
             r.raise_for_status()
             return ET.fromstring(r.text)
@@ -48,7 +48,7 @@ class PaloAltoNetwork(BaseNetwork):
         xpath = (f"/config/devices/entry/vsys/entry[@name='{settings.PALOALTO_VSYS}']/"
                  f"address/entry[@name='{name}']")
         url = f"{settings.PALOALTO_BASE_URL}/api/"
-        with httpx.Client(timeout=15, verify=False) as c:
+        with httpx.Client(timeout=15, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.get(url, params={"type": "config", "action": "delete",
                                    "key": settings.PALOALTO_API_KEY, "xpath": xpath})
             return {"status": r.status_code, "ip": ip}

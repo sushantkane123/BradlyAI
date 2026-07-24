@@ -44,7 +44,7 @@ class ServiceNowClient:
         }
         if additional_fields:
             body.update(additional_fields)
-        with httpx.Client(timeout=20, verify=False) as c:
+        with httpx.Client(timeout=20, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.post(f"{self.base}/api/now/table/incident",
                        headers=self._headers(), json=body)
             r.raise_for_status()
@@ -62,7 +62,7 @@ class ServiceNowClient:
             body["state"] = state
         if additional_fields:
             body.update(additional_fields)
-        with httpx.Client(timeout=20, verify=False) as c:
+        with httpx.Client(timeout=20, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.patch(f"{self.base}/api/now/table/incident/{sys_id}",
                         headers=self._headers(), json=body)
             r.raise_for_status()
@@ -71,7 +71,7 @@ class ServiceNowClient:
     def get_incident(self, sys_id: str) -> Dict[str, Any]:
         if self._guard():
             return {"dry_run": True, "sys_id": sys_id}
-        with httpx.Client(timeout=20, verify=False) as c:
+        with httpx.Client(timeout=20, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.get(f"{self.base}/api/now/table/incident/{sys_id}",
                       headers=self._headers())
             r.raise_for_status()
@@ -80,7 +80,7 @@ class ServiceNowClient:
     def list_incidents(self, query: str = "active=true", limit: int = 20) -> List[Dict[str, Any]]:
         if self._guard():
             return []
-        with httpx.Client(timeout=20, verify=False) as c:
+        with httpx.Client(timeout=20, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.get(f"{self.base}/api/now/table/incident",
                       headers=self._headers(),
                       params={"sysparm_query": query, "sysparm_limit": limit})

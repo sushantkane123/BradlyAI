@@ -36,7 +36,7 @@ class WazuhRule(BaseModel):
 class WazuhAgent(BaseModel):
     id: str = "000"
     name: str = "unknown"
-    ip: str = "0.0.0.0"
+    ip: str = ""
 
 
 class WazuhAlert(BaseModel):
@@ -269,7 +269,7 @@ async def create_incident(
     severity: str = Query("HIGH"),
     source: str = Query("manual"),
     source_agent: str = Query("unknown"),
-    source_ip: str = Query("0.0.0.0"),
+    source_ip: str = Query(""),
     mitre: str = Query("TBD"),
 ):
     """Manually create an incident (for testing or manual triage)."""

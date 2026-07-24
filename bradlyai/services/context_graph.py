@@ -106,7 +106,8 @@ class ContextGraphEngine:
 
     async def _fetch_threat_intel_context(self, ip: Optional[str]) -> Dict[str, Any]:
         """Fetch real-time IP reputational data."""
-        if not ip or ip in ("127.0.0.1", "localhost", "0.0.0.0"):
+        # This checks a special unroutable-IP value; it is not a server bind.
+        if not ip or ip in ("127.0.0.1", "localhost", "0.0.0.0"):  # nosec B104
             return {"status": "skipped", "reason": "Internal or loopback IP address"}
         
         await asyncio.sleep(0.02)

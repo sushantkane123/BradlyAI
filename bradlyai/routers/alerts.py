@@ -2,13 +2,15 @@
 FastAPI Router for Security Alerts & Incident Triage
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from bradlyai.database import get_db
 from bradlyai.models.alert import AlertModel, AlertStorylineModel
 from bradlyai.schemas.alert import AlertResponse, TriggerAttackRequest
 from bradlyai.services.ai_engine import ai_engine
+from bradlyai.config import settings
+from bradlyai.services.auth import require_permission
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -48,11 +50,11 @@ def get_alert_by_id(alert_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found in active pool.")
     return alert
 
-@router.post("/trigger-simulated-attack")
+@router.post("/trigger-simulated-attack", dependencies=[Depends(require_permission("settings", "write"))])
 def trigger_attack(req: TriggerAttackRequest, db: Session = Depends(get_db)):
-    """
-    Trigger a live simulated cyber attack to observe BradlyAI automatically detect, analyze, and remediate
-    """
+    """Create a demo-only alert. It is unavailable in production."""
+    if settings.ENVIRONMENT.lower() == "production":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Simulation endpoints are disabled in production")
     simulated_scenarios = [
         ("DEV-WIN-SRV09", "45.33.12.9", "Reflective DLL Memory Injection & Credential Harvesting"),
         ("FIN-WRK-102", "192.168.20.12", "Unauthorized Lateral Movement via SMB Exploitation"),

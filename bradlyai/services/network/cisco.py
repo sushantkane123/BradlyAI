@@ -24,7 +24,7 @@ class CiscoAsaNetwork(BaseNetwork):
     def _block_ip(self, ip: str, duration_hours: Optional[int], reason: str) -> Dict[str, Any]:
         # Cisco ASA ACL management — add deny entry
         url = f"{settings.CISCO_ASA_BASE_URL}/api/access/acl"
-        with httpx.Client(timeout=15, verify=False) as c:
+        with httpx.Client(timeout=15, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.post(url, headers=self._headers(), json={
                 "name": "bradlyai_denylist",
                 "rules": [{
@@ -36,7 +36,7 @@ class CiscoAsaNetwork(BaseNetwork):
 
     def _unblock_ip(self, ip: str) -> Dict[str, Any]:
         url = f"{settings.CISCO_ASA_BASE_URL}/api/access/acl/bradlyai_denylist/rules"
-        with httpx.Client(timeout=15, verify=False) as c:
+        with httpx.Client(timeout=15, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.delete(url, headers=self._headers(),
                          params={"dst": ip})
             return {"status": r.status_code, "ip": ip}

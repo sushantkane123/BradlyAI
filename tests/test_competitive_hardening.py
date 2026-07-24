@@ -50,6 +50,16 @@ client = TestClient(app)
 _bootstrap_done = False
 
 
+def admin_token():
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "admin", "password": "Admin123!ChangeMe"},
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["access_token"]
+
+
+
 # ── Auth ──────────────────────────────────────────────────────────────
 class TestAuth:
     def test_health(self):
@@ -58,13 +68,8 @@ class TestAuth:
         assert r.json()["status"] in ("healthy", "degraded")
 
     def test_login_admin_default(self):
-        r = client.post("/api/v1/auth/login",
-                        json={"username": "admin", "password": "Admin123!ChangeMe"})
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "access_token" in body
-        assert body["user"]["username"] == "admin"
-        return body["access_token"]
+        token = admin_token()
+        assert token
 
     def test_login_bad_password(self):
         r = client.post("/api/v1/auth/login",
@@ -72,7 +77,7 @@ class TestAuth:
         assert r.status_code == 401
 
     def test_me_with_token(self):
-        token = self.test_login_admin_default()
+        token = admin_token()
         r = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 200
         assert r.json()["username"] == "admin"
@@ -82,7 +87,7 @@ class TestAuth:
         assert r.status_code == 401
 
     def test_create_user(self):
-        token = self.test_login_admin_default()
+        token = admin_token()
         r = client.post("/api/v1/auth/users",
                         headers={"Authorization": f"Bearer {token}"},
                         json={"username": "alice", "email": "alice@test.local",
@@ -91,8 +96,8 @@ class TestAuth:
         assert r.status_code == 201, r.text
         assert r.json()["username"] == "alice"
 
-    def test_create_api_key(self):
-        token = self.test_login_admin_default()
+    def _create_api_key(self):
+        token = admin_token()
         r = client.post("/api/v1/auth/api-keys",
                         headers={"Authorization": f"Bearer {token}"},
                         json={"name": "test-key", "scopes": "read,write,admin"})
@@ -101,8 +106,11 @@ class TestAuth:
         assert body["secret"].startswith("brd_")
         return body["secret"]
 
+    def test_create_api_key(self):
+        assert self._create_api_key()
+
     def test_api_key_authenticates(self):
-        secret = self.test_create_api_key()
+        secret = self._create_api_key()
         r = client.get("/api/v1/auth/me", headers={"X-API-Key": secret})
         assert r.status_code == 200
 
@@ -111,9 +119,9 @@ class TestAuth:
 class TestCases:
     @pytest.fixture
     def token(self):
-        return TestAuth().test_login_admin_default()
+        return admin_token()
 
-    def test_create_case(self, token):
+    def _create_case(self, token):
         r = client.post("/api/v1/cases",
                         headers={"Authorization": f"Bearer {token}"},
                         json={"title": "Test incident", "severity": "HIGH",
@@ -122,22 +130,25 @@ class TestCases:
         case_id = r.json()["id"]
         return case_id
 
+    def test_create_case(self, token):
+        assert self._create_case(token)
+
     def test_add_note(self, token):
-        case_id = self.test_create_case(token)
+        case_id = self._create_case(token)
         r = client.post(f"/api/v1/cases/{case_id}/notes",
                         headers={"Authorization": f"Bearer {token}"},
                         json={"note": "Investigating", "note_type": "comment"})
         assert r.status_code == 200
 
     def test_add_evidence(self, token):
-        case_id = self.test_create_case(token)
+        case_id = self._create_case(token)
         r = client.post(f"/api/v1/cases/{case_id}/evidence",
                         headers={"Authorization": f"Bearer {token}"},
                         json={"evidence_type": "log", "value": "user=admin login from 10.0.0.5"})
         assert r.status_code == 200
 
     def test_status_change(self, token):
-        case_id = self.test_create_case(token)
+        case_id = self._create_case(token)
         r = client.post(f"/api/v1/cases/{case_id}/status",
                         headers={"Authorization": f"Bearer {token}"},
                         json={"status": "IN_PROGRESS", "note": "Working"})
@@ -155,7 +166,7 @@ class TestCases:
 class TestPlaybooks:
     @pytest.fixture
     def token(self):
-        return TestAuth().test_login_admin_default()
+        return admin_token()
 
     def test_list_builtin(self, token):
         r = client.get("/api/v1/playbooks",
@@ -164,7 +175,7 @@ class TestPlaybooks:
         names = [p["name"] for p in r.json()]
         assert "Phishing Email Response" in names
 
-    def test_trigger_bruteforce(self, token):
+    def _trigger_bruteforce(self, token):
         r = client.post("/api/v1/playbooks/trigger",
                         headers={"Authorization": f"Bearer {token}"},
                         json={"playbook_id": "pb_bruteforce_response",
@@ -173,14 +184,17 @@ class TestPlaybooks:
         assert r.status_code == 200
         run = r.json()
         assert run["status"] in ("RUNNING", "COMPLETED", "AWAITING_APPROVAL")
-        return run["id"]
+        assert run["id"]
+
+    def test_trigger_bruteforce(self, token):
+        self._trigger_bruteforce(token)
 
 
 # ── Sigma ─────────────────────────────────────────────────────────────
 class TestSigma:
     @pytest.fixture
     def token(self):
-        return TestAuth().test_login_admin_default()
+        return admin_token()
 
     def test_seed_defaults(self, token):
         r = client.post("/api/v1/sigma/seed-defaults",
@@ -210,7 +224,7 @@ class TestSigma:
 class TestNotifications:
     @pytest.fixture
     def token(self):
-        return TestAuth().test_login_admin_default()
+        return admin_token()
 
     def test_send_slack_dry_run(self, token):
         r = client.post("/api/v1/notifications/send",
@@ -240,7 +254,7 @@ class TestNotifications:
 class TestResponseActions:
     @pytest.fixture
     def token(self):
-        return TestAuth().test_login_admin_default()
+        return admin_token()
 
     def test_edr_isolate_dry_run(self, token):
         r = client.post("/api/v1/edr/hosts/isolate",
@@ -268,7 +282,7 @@ class TestResponseActions:
 class TestReports:
     @pytest.fixture
     def token(self):
-        return TestAuth().test_login_admin_default()
+        return admin_token()
 
     def test_kpis(self, token):
         r = client.get("/api/v1/reports/kpis?since_hours=24",
@@ -304,7 +318,7 @@ class TestMetrics:
 class TestThreatIntel:
     @pytest.fixture
     def token(self):
-        return TestAuth().test_login_admin_default()
+        return admin_token()
 
     def test_ip_lookup_dry_run(self, token):
         r = client.post("/api/v1/threatintel/lookup",
@@ -320,7 +334,7 @@ class TestThreatIntel:
 class TestITSM:
     @pytest.fixture
     def token(self):
-        return TestAuth().test_login_admin_default()
+        return admin_token()
 
     def test_servicenow_dry_run_503(self, token):
         # ITSM_PROVIDER=none → 503

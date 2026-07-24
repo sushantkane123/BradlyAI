@@ -16,10 +16,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # ── Application Identity ──────────────────────────────────────────
-    APP_NAME: str = "BradlyAI - Driverless SOC & Automated Incident Response"
+    APP_NAME: str = "BradlyAI - Evidence-First SOC Operations"
     APP_VERSION: str = "2.4.0"
     ENVIRONMENT: str = "development"
-    HOST: str = "0.0.0.0"
+    # Bind loopback by default; container deployments explicitly override this.
+    HOST: str = "127.0.0.1"
     PORT: int = 8000
 
     # ── Database ───────────────────────────────────────────────────────
@@ -40,17 +41,20 @@ class Settings(BaseSettings):
 
     # ── Autonomous SOC Settings ────────────────────────────────────────
     AUTO_CONTAINMENT_THRESHOLD: float = 0.85
-    LIVE_SIMULATION_WORKER_ACTIVE: bool = True
+    # Real deployments start quiet. Explicitly enable either option for a demo.
+    LIVE_SIMULATION_WORKER_ACTIVE: bool = False
     SIMULATION_INTERVAL_SECONDS: int = 30
-    # Retained as True for backwards-compatible test/demo installs. Set false in
-    # every real deployment to start with an empty, live-ingestion-only workspace.
-    DEMO_DATA_ENABLED: bool = True
+    DEMO_DATA_ENABLED: bool = False
 
     # ── Real event ingestion ───────────────────────────────────────────
     # shadow records and audits decisions without closing external alerts.
     INGESTION_DEFAULT_MODE: str = "shadow"
     # When configured, POST /api/v1/ingest/events requires X-Ingestion-Key.
     INGESTION_SHARED_SECRET: str = ""
+
+    # ── Outbound network safety ────────────────────────────────────────
+    # Do not disable certificate verification in production integrations.
+    OUTBOUND_VERIFY_TLS: bool = True
 
     # ── Rate Limiting ──────────────────────────────────────────────────
     RATE_LIMIT_ENABLED: bool = True
@@ -89,6 +93,12 @@ class Settings(BaseSettings):
     AUTH_PASSWORD_MIN_LENGTH: int = 12
     AUTH_MAX_FAILED_LOGINS: int = 5
     AUTH_LOCKOUT_MINUTES: int = 15
+
+    # First administrator. A value is required to create the account; production
+    # validates that it is not weak/default. Use a secret manager in production.
+    BOOTSTRAP_ADMIN_USERNAME: str = "admin"
+    BOOTSTRAP_ADMIN_EMAIL: str = "admin@bradlyai.local"
+    BOOTSTRAP_ADMIN_PASSWORD: str = ""
 
     # SSO — OIDC (Okta, Azure AD, Google Workspace, Auth0, Keycloak)
     SSO_OIDC_ENABLED: bool = False
@@ -313,11 +323,20 @@ class Settings(BaseSettings):
         # Fail fast in production if JWT secret is still the dev default
         if self.ENVIRONMENT.lower() == "production":
             secret = self.AUTH_JWT_SECRET or ""
-            bad_markers = ("change-me", "dev-only", "000000", "test-secret")
+            password = self.BOOTSTRAP_ADMIN_PASSWORD or ""
+            bad_markers = ("change-me", "dev-only", "000000", "test-secret", "admin123")
             if len(secret) < 32 or any(m in secret.lower() for m in bad_markers):
                 raise ValueError(
                     "AUTH_JWT_SECRET must be set to a strong random value in production. "
                     "Generate with: openssl rand -hex 32"
+                )
+            if len(password) < max(16, self.AUTH_PASSWORD_MIN_LENGTH) or any(m in password.lower() for m in bad_markers):
+                raise ValueError(
+                    "BOOTSTRAP_ADMIN_PASSWORD must be a unique 16+ character secret in production."
+                )
+            if self.DEMO_DATA_ENABLED or self.LIVE_SIMULATION_WORKER_ACTIVE:
+                raise ValueError(
+                    "DEMO_DATA_ENABLED and LIVE_SIMULATION_WORKER_ACTIVE must both be false in production."
                 )
         return self
 

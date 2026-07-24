@@ -20,7 +20,7 @@ class CheckPointNetwork(BaseNetwork):
         if self._SID["value"] and self._SID["expires_at"] > now + 60:
             return self._SID["value"]
         url = f"{settings.CHECKPOINT_BASE_URL}/web_api/login"
-        with httpx.Client(timeout=15, verify=False) as c:
+        with httpx.Client(timeout=15, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.post(url, json={"user": settings.CHECKPOINT_USERNAME,
                                   "password": settings.CHECKPOINT_PASSWORD})
             r.raise_for_status()
@@ -34,7 +34,7 @@ class CheckPointNetwork(BaseNetwork):
     def _block_ip(self, ip: str, duration_hours: Optional[int], reason: str) -> Dict[str, Any]:
         name = f"bradlyai_block_{ip.replace('.', '_')}"
         url = f"{settings.CHECKPOINT_BASE_URL}/web_api/add-host"
-        with httpx.Client(timeout=15, verify=False) as c:
+        with httpx.Client(timeout=15, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.post(url, headers=self._headers(),
                        json={"name": name, "ip-address": ip,
                              "comments": reason or "BradlyAI block"})
@@ -43,7 +43,7 @@ class CheckPointNetwork(BaseNetwork):
     def _unblock_ip(self, ip: str) -> Dict[str, Any]:
         name = f"bradlyai_block_{ip.replace('.', '_')}"
         url = f"{settings.CHECKPOINT_BASE_URL}/web_api/delete-host"
-        with httpx.Client(timeout=15, verify=False) as c:
+        with httpx.Client(timeout=15, verify=settings.OUTBOUND_VERIFY_TLS) as c:
             r = c.post(url, headers=self._headers(), json={"name": name})
             return {"status": r.status_code, "ip": ip}
 

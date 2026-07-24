@@ -45,7 +45,7 @@ python run.py
 # 1. Login with bootstrap admin
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"Admin123!ChangeMe"}'
+  -d '{"username":"$BOOTSTRAP_ADMIN_USERNAME","password":"$BOOTSTRAP_ADMIN_PASSWORD"}'
 
 # 2. Visit /metrics (Prometheus)
 curl http://localhost:8000/metrics
@@ -53,7 +53,7 @@ curl http://localhost:8000/metrics
 # 3. Trigger a built-in playbook (dry-run by default)
 TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"Admin123!ChangeMe"}' | jq -r .access_token)
+  -d '{"username":"$BOOTSTRAP_ADMIN_USERNAME","password":"$BOOTSTRAP_ADMIN_PASSWORD"}' | jq -r .access_token)
 
 curl -X POST http://localhost:8000/api/v1/playbooks/trigger \
   -H "Authorization: Bearer $TOKEN" \

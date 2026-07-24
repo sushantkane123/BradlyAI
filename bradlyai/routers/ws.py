@@ -16,7 +16,7 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections.append(websocket)
         logger.info(f"WebSocket connected — {len(self.active_connections)} active")
-        await websocket.send_text(json.dumps({"type": "HANDSHAKE", "status": "CONNECTED", "message": "BradlyAI Live Driverless Telemetry Channel Engaged."}))
+        await websocket.send_text(json.dumps({"type": "HANDSHAKE", "status": "CONNECTED", "message": "BradlyAI live telemetry channel connected."}))
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:

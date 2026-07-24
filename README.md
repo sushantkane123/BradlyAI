@@ -86,6 +86,11 @@ Health:     http://127.0.0.1:8000/health
 git clone https://github.com/sushantkane123/BradlyAI.git
 cd BradlyAI
 cp .env.example .env
+
+# Set unique local secrets before starting Docker.
+# On Linux/macOS you can generate values with: openssl rand -hex 32
+# Edit .env and set POSTGRES_PASSWORD, AUTH_JWT_SECRET, and BOOTSTRAP_ADMIN_PASSWORD.
+
 docker compose up --build
 ```
 
@@ -299,7 +304,7 @@ Before opening a pull request:
 Current test suite:
 
 ```text
-62 tests passing
+63 tests passing
 ```
 
 ---
