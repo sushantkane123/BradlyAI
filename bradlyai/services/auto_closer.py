@@ -26,10 +26,15 @@ logger = logging.getLogger("bradlyai.auto_closer")
 
 
 class AutoCloser:
-    """Applies the L1 Agent's decision: closes alerts, logs audit trail, calls Wazuh API."""
+    """Applies the L1 Agent's decision: closes alerts, logs audit trail, calls Wazuh API.
+
+    Also triggers autonomous Dropzone-style investigation on every processed alert
+    (when auto-investigate mode is enabled).
+    """
 
     def __init__(self, agent_version: str = "1.0.0"):
         self.agent_version = agent_version
+        self._auto_investigate_enabled = True
 
     def apply(self, decision: Decision, alert_id_from_db: Optional[str] = None) -> Dict[str, Any]:
         """Apply a decision to the alert database.
@@ -118,6 +123,34 @@ class AutoCloser:
                 f"audit_id={audit.id}"
             )
 
+            # ── Dropzone Auto-Investigation Trigger ──
+            dropzone_result = None
+            if self._auto_investigate_enabled and alert:
+                try:
+                    import asyncio
+                    from bradlyai.services.dropzone_agent import auto_investigate_alert
+                    db_for_inv = SessionLocal()
+                    try:
+                        alert_for_inv = db_for_inv.query(AlertModel).filter(
+                            AlertModel.id == alert.id
+                        ).first()
+                        if alert_for_inv:
+                            loop = asyncio.new_event_loop()
+                            dropzone_inv = loop.run_until_complete(
+                                auto_investigate_alert(alert_for_inv, db_for_inv)
+                            )
+                            loop.close()
+                            dropzone_result = {
+                                "investigation_id": dropzone_inv.investigation_id,
+                                "disposition": dropzone_inv.disposition,
+                                "confidence": dropzone_inv.confidence,
+                            }
+                    finally:
+                        db_for_inv.close()
+                except Exception as dz_err:
+                    logger.warning(f"Dropzone auto-investigation failed: {dz_err}")
+                    dropzone_result = {"error": str(dz_err)}
+
             return {
                 "audit_id": audit.id,
                 "alert_id": decision.alert_id,
@@ -127,6 +160,7 @@ class AutoCloser:
                 "alert_closed": audit.action_taken and audit.action_taken.startswith("closed"),
                 "reason": decision.reason,
                 "wazuh_result": wazuh_result if decision.decision == "CLOSE" and alert_source == "wazuh" else None,
+                "dropzone_investigation": dropzone_result,
             }
         except Exception as e:
             logger.exception(f"Auto-closer failed for {decision.alert_id}: {e}")

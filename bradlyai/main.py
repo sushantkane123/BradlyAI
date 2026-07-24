@@ -22,6 +22,8 @@ from bradlyai.routers import (
     # NEW competitive-hardening routers
     auth, notifications, edr, network, identity, itsm,
     threatintel, sigma, cases, playbooks, reports, metrics, agent,
+    # Dropzone-style autonomous SOC router
+    dropzone,
 )
 from bradlyai.services.live_simulation_worker import live_worker
 
@@ -216,6 +218,7 @@ app.include_router(cases.router, prefix=api_prefix)
 app.include_router(playbooks.router, prefix=api_prefix)
 app.include_router(reports.router, prefix=api_prefix)
 app.include_router(agent.router, prefix=api_prefix)
+app.include_router(dropzone.router, prefix=api_prefix)
 app.include_router(metrics.router)
 
 
@@ -262,3 +265,9 @@ def serve_js():
 @app.get("/data.js")
 def serve_data_js():
     return FileResponse(os.path.join(STATIC_DIR, "data.js"))
+
+
+@app.get("/dropzone")
+def serve_dropzone_dashboard():
+    """Dropzone-style autonomous SOC dashboard."""
+    return FileResponse(os.path.join(STATIC_DIR, "dropzone.html"))

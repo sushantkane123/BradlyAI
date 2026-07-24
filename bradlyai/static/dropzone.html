@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BradlyAI — Autonomous SOC (Dropzone-style)</title>
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --card-bg: #111827;
+            --border: #1e293b;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59,130,246,0.15);
+            --green: #22c55e;
+            --yellow: #eab308;
+            --red: #ef4444;
+            --purple: #8b5cf6;
+        }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        
+        /* Header */
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 32px;
+        }
+        .logo { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+        .logo span { color: var(--accent); }
+        .badge {
+            background: var(--accent-glow); color: var(--accent); border: 1px solid rgba(59,130,246,0.3);
+            padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px; margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px 24px;
+        }
+        .stat-label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .stat-value { font-size: 36px; font-weight: 700; }
+        .stat-value.green { color: var(--green); }
+        .stat-value.yellow { color: var(--yellow); }
+        .stat-value.red { color: var(--red); }
+        .stat-value.purple { color: var(--purple); }
+        .stat-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+        
+        /* Methodology Badge */
+        .methodology {
+            background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.1));
+            border: 1px solid rgba(139,92,246,0.3); border-radius: 12px; padding: 16px 24px; margin-bottom: 32px;
+            display: flex; align-items: center; gap: 16px;
+        }
+        .methodology .oscar { font-size: 24px; font-weight: 700; }
+        .methodology .oscar-letters { display: flex; gap: 8px; }
+        .methodology .oscar-letter {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 8px 14px; text-align: center; font-size: 12px;
+        }
+        .methodology .oscar-letter strong { display: block; font-size: 18px; color: var(--accent); }
+        
+        /* Investigation List */
+        .section-title {
+            font-size: 20px; font-weight: 700; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-title .line { flex:1; height: 1px; background: var(--border); }
+        
+        .investigation-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; margin-bottom: 12px;
+            transition: border-color 0.2s;
+        }
+        .investigation-card:hover { border-color: var(--accent); }
+        .inv-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .inv-id { font-size: 12px; color: var(--muted); font-family: monospace; }
+        .inv-alert { font-weight: 600; font-size: 15px; }
+        .disposition {
+            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            text-transform: uppercase;
+        }
+        .disposition.BENIGN { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+        .disposition.SUSPICIOUS { background: rgba(234,179,8,0.1); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+        .disposition.MALICIOUS { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+        
+        .oscar-steps {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0;
+        }
+        .oscar-step {
+            background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px;
+            border-left: 3px solid var(--border); font-size: 12px;
+        }
+        .oscar-step.completed { border-left-color: var(--green); }
+        .oscar-step.skipped { border-left-color: var(--muted); opacity: 0.5; }
+        .oscar-step .phase { font-weight: 600; color: var(--accent); font-size: 10px; text-transform: uppercase; }
+        .oscar-step .count { font-size: 11px; color: var(--muted); }
+        
+        .inv-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; color: var(--muted); margin-top: 12px;
+            padding-top: 12px; border-top: 1px solid var(--border);
+        }
+        
+        /* Connector Status */
+        .connectors {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px; margin-top: 32px;
+        }
+        .connector {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 14px 18px; font-size: 13px;
+        }
+        .connector .name { font-weight: 600; margin-bottom: 6px; }
+        .connector .status { font-size: 12px; }
+        .connector .status.on { color: var(--green); }
+        .connector .status.off { color: var(--muted); }
+        
+        /* Buttons */
+        .btn {
+            background: var(--accent); color: white; border: none; border-radius: 8px;
+            padding: 12px 24px; font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: transparent; border: 1px solid var(--border); color: var(--text);
+        }
+        
+        /* Actions bar */
+        .actions {
+            display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
+        }
+        
+        /* Loading */
+        .loading { text-align: center; padding: 48px; color: var(--muted); }
+        .spinner {
+            width: 40px; height: 40px; border: 3px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .oscar-steps { grid-template-columns: repeat(2, 1fr); }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">Bradly<span>AI</span> — Autonomous SOC</div>
+        <div class="badge">Dropzone-Style L1 Agent</div>
+    </div>
+    
+    <!-- Methodology -->
+    <div class="methodology">
+        <div class="oscar" style="color:var(--purple)">OSCAR</div>
+        <div class="oscar-letters">
+            <div class="oscar-letter"><strong>O</strong> Obtain</div>
+            <div class="oscar-letter"><strong>S</strong> Strategize</div>
+            <div class="oscar-letter"><strong>C</strong> Collect</div>
+            <div class="oscar-letter"><strong>A</strong> Analyze</div>
+            <div class="oscar-letter"><strong>R</strong> Report</div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-left:auto;">
+            Recursive reasoning ◆ Glass-box transparency ◆ No human in critical path
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="actions">
+        <button class="btn" onclick="investigateAll()">⚡ Auto-Investigate All Pending</button>
+        <button class="btn btn-secondary" onclick="refreshDashboard()">🔄 Refresh</button>
+        <span style="font-size:13px;color:var(--muted);align-self:center;" id="auto-status">
+            Auto-investigation: Enabled
+        </span>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid">
+        <div class="loading"><div class="spinner"></div>Loading stats...</div>
+    </div>
+    
+    <!-- Investigations -->
+    <div class="section-title">
+        🔍 Autonomous Investigations <span class="line"></span>
+        <span style="font-size:14px;color:var(--muted);" id="inv-count"></span>
+    </div>
+    <div id="investigations-list">
+        <div class="loading"><div class="spinner"></div>Loading investigations...</div>
+    </div>
+    
+    <!-- Connectors -->
+    <div class="section-title" style="margin-top:32px;">
+        🔌 Connector Status <span class="line"></span>
+    </div>
+    <div class="connectors" id="connectors-grid">
+        <div class="loading">Loading connector status...</div>
+    </div>
+</div>
+
+<script>
+const API_BASE = '/api/v1/dropzone';
+
+async function fetchJSON(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
+
+async function refreshDashboard() {
+    await Promise.all([loadStats(), loadInvestigations()]);
+}
+
+async function loadStats() {
+    try {
+        const data = await fetchJSON(`${API_BASE}/dashboard?since_hours=24`);
+        const breakdown = data.disposition_breakdown;
+        
+        document.getElementById('stats-grid').innerHTML = `
+            <div class="stat-card">
+                <div class="stat-label">Total Investigations</div>
+                <div class="stat-value purple">${data.total_investigations}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Benign (Auto-Close)</div>
+                <div class="stat-value green">${breakdown.BENIGN?.count || 0}</div>
+                <div class="stat-sub">${breakdown.BENIGN?.pct || 0}% of total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Suspicious</div>
+                <div class="stat-value yellow">${breakdown.SUSPICIOUS?.count || 0}</div>
+                <div class="stat-sub">${breakdown.SUSPICIOUS?.pct || 0}% of total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Malicious</div>
+                <div class="stat-value red">${breakdown.MALICIOUS?.count || 0}</div>
+                <div class="stat-sub">${breakdown.MALICIOUS?.pct || 0}% of total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Auto-Close Rate</div>
+                <div class="stat-value green">${(data.auto_close_rate * 100).toFixed(1)}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Investigation Time</div>
+                <div class="stat-value">${data.avg_investigation_time_seconds}s</div>
+            </div>
+        `;
+        
+        // Connectors
+        const cs = data.connector_status;
+        document.getElementById('connectors-grid').innerHTML = `
+            <div class="connector">
+                <div class="name">🛡️ EDR</div>
+                <div class="status ${cs.edr.enabled ? 'on' : 'off'}">
+                    ${cs.edr.enabled ? '✓ ' + cs.edr.provider : '✗ Disabled'}
+                </div>
+            </div>
+            <div class="connector">
+                <div class="name">👤 Identity</div>
+                <div class="status ${cs.identity.enabled ? 'on' : 'off'}">
+                    ${cs.identity.enabled ? '✓ ' + cs.identity.provider : '✗ Disabled'}
+                </div>
+            </div>
+            <div class="connector">
+                <div class="name">🌐 Network</div>
+                <div class="status ${cs.network.enabled ? 'on' : 'off'}">
+                    ${cs.network.enabled ? '✓ ' + cs.network.provider : '✗ Disabled'}
+                </div>
+            </div>
+            <div class="connector">
+                <div class="name">🔍 Threat Intel</div>
+                <div class="status ${cs.threat_intel.enabled ? 'on' : 'off'}">
+                    ${cs.threat_intel.enabled ? '✓ Enabled' : '✗ Disabled'}
+                </div>
+            </div>
+            <div class="connector">
+                <div class="name">📡 SIEM</div>
+                <div class="status ${cs.siem.wazuh ? 'on' : 'off'}">
+                    Wazuh: ${cs.siem.wazuh ? '✓' : '✗'}
+                </div>
+            </div>
+        `;
+        
+    } catch(e) { 
+        document.getElementById('stats-grid').innerHTML = `<div class="loading" style="color:var(--red)">Error: ${e.message}</div>`;
+    }
+}
+
+async function loadInvestigations() {
+    try {
+        const data = await fetchJSON(`${API_BASE}/investigations?limit=50`);
+        document.getElementById('inv-count').textContent = `(${data.count})`;
+        
+        if (data.count === 0) {
+            document.getElementById('investigations-list').innerHTML = `
+                <div style="text-align:center;padding:48px;color:var(--muted);">
+                    No investigations yet. Click "Auto-Investigate All Pending" to start!
+                </div>`;
+            return;
+        }
+        
+        const html = data.investigations.map(inv => {
+            const plan = inv.plan || [];
+            const phases = ['OBTAIN','STRATEGIZE','COLLECT','ANALYZE','REPORT'];
+            const phaseCounts = {};
+            phases.forEach(p => {
+                phaseCounts[p] = plan.filter(s => s.phase === p).length;
+            });
+            
+            return `
+            <div class="investigation-card">
+                <div class="inv-header">
+                    <div>
+                        <div class="inv-id">${inv.id}</div>
+                        <div class="inv-alert">Alert: ${inv.alert_id}</div>
+                    </div>
+                    <span class="disposition ${inv.disposition || inv.recommendation}">${inv.disposition || inv.recommendation}</span>
+                </div>
+                <div class="oscar-steps">
+                    ${phases.map(p => `
+                        <div class="oscar-step ${phaseCounts[p] > 0 ? 'completed' : 'skipped'}">
+                            <div class="phase">${p}</div>
+                            <div class="count">${phaseCounts[p]} steps</div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="font-size:13px;color:var(--muted);">${(inv.summary || '').substring(0, 200)}...</div>
+                <div class="inv-footer">
+                    <span>Confidence: ${inv.confidence}</span>
+                    <span>${new Date(inv.created_at).toLocaleString()}</span>
+                </div>
+            </div>`;
+        }).join('');
+        
+        document.getElementById('investigations-list').innerHTML = html;
+    } catch(e) {
+        document.getElementById('investigations-list').innerHTML = `<div class="loading" style="color:var(--red)">Error: ${e.message}</div>`;
+    }
+}
+
+async function investigateAll() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳ Investigating...';
+    try {
+        const data = await fetchJSON(`${API_BASE}/investigate/all?limit=50`, {method:'POST'});
+        btn.textContent = `✅ Done — ${data.investigated} alerts investigated`;
+        setTimeout(() => { btn.textContent = '⚡ Auto-Investigate All Pending'; btn.disabled = false; }, 3000);
+        await refreshDashboard();
+    } catch(e) {
+        btn.textContent = `❌ Error: ${e.message}`;
+        btn.disabled = false;
+    }
+}
+
+// Initial load
+refreshDashboard();
+// Auto-refresh every 30 seconds
+setInterval(refreshDashboard, 30000);
+</script>
+</body>
+</html>

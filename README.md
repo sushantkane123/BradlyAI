@@ -1,322 +1,235 @@
-# BradlyAI
+# BradlyAI — Autonomous SOC L1 Agent (Dropzone-style)
 
-**BradlyAI helps security teams investigate alerts from SIEM, XDR, EDR, and custom security tools.**
+**BradlyAI is an autonomous, AI-powered Security Operations Center that investigates every alert without human intervention — just like Dropzone AI.**
 
-It collects alert evidence, checks recent history, helps analysts create cases, and recommends what to do next:
+It autonomously performs the full L1 triage workflow:
 
-```text
-Escalate  → needs analyst attention
-Review    → more evidence is needed
-Auto-close candidate → may be safe only after customer policy and analyst approval
-```
+| OSCAR Phase | What Happens |
+|---|---|
+| **O**btain | Receives alerts from SIEM, XDR, EDR, and any security tool. Normalizes and extracts entities (IPs, hosts, users, hashes, domains). |
+| **S**trategize | Formulates 3+ hypotheses about why each alert fired. Plans evidence collection prioritized by data source. |
+| **C**ollect | Queries your security tools — EDR, Identity, Network, Threat Intel, SIEM — just like a human analyst would. |
+| **A**nalyze | Recursively evaluates hypotheses against evidence. Deepens investigation until confidence exceeds threshold. |
+| **R**eport | Composes a clear BENIGN / SUSPICIOUS / MALICIOUS disposition with confidence, reasoning, and raw evidence links. |
 
-BradlyAI is built for security teams, MSSPs, contributors, and anyone learning how modern SOC automation works.
-
-> BradlyAI starts in a safe mode. It does not automatically isolate devices, disable users, block IPs, or close high-risk alerts.
-
----
-
-## What can BradlyAI do?
-
-- Show security alerts in a SOC dashboard
-- Accept alerts from multiple security tools
-- Keep the original source event as evidence
-- Help investigate alerts using a structured SOC workflow
-- Create and track investigation cases
-- Record notes, evidence, decisions, and audit history
-- Work in **shadow mode** before any automated action is enabled
-- Support Wazuh, Splunk, Microsoft Sentinel, Microsoft Defender, CrowdStrike, Elastic, generic SIEM, XDR, EDR, and custom webhooks
+> **No human in the critical path.** Every alert gets a thorough, consistent investigation — 3 AM or 3 PM, same depth.
 
 ---
 
-## How it works
+## BradlyAI vs Dropzone AI — Feature Comparison
 
-```text
-Security alert
-     ↓
-BradlyAI normalizes and stores the alert
-     ↓
-L1 decision checks rules, history, repeats, and policies
-     ↓
-Investigation agent collects available evidence and creates a plan
-     ↓
-Analyst reviews the recommendation
-     ↓
-Case, escalation, or approved policy action
-```
+| Feature | BradlyAI | Dropzone AI |
+|---|---|---|
+| **Autonomous L1 investigation** | ✅ No human needed | ✅ |
+| **OSCAR methodology** | ✅ 5-phase recursive investigation | ✅ |
+| **Recursive reasoning** | ✅ 3-level depth, re-evaluates until confident | ✅ |
+| **Multi-hypothesis formulation** | ✅ 3+ per alert type | ✅ |
+| **Pre-trained alert patterns** | ✅ Phishing, Malware, Brute Force, PrivEsc, Exfil, Scanner | ✅ |
+| **EDR connectors** | ✅ CrowdStrike, Defender, SentinelOne, Carbon Black | ✅ |
+| **Identity connectors** | ✅ Azure AD, Okta | ✅ |
+| **Network containment** | ✅ Palo Alto, Fortinet, Cisco, Check Point | ✅ |
+| **Threat intelligence** | ✅ VirusTotal, AbuseIPDB, OTX, MISP | ✅ |
+| **Glass-box transparency** | ✅ Every step, query & decision auditable | ✅ |
+| **SIEM integrations** | ✅ Splunk, Sentinel, Wazuh, Elastic, QRadar | ✅ |
+| **ITSM integrations** | ✅ ServiceNow, Jira, Zendesk | ✅ |
+| **Auto-investigate every alert** | ✅ Ingest → Investigate in one call | ✅ |
+| **Natural language coaching** | ✅ Whitelist, rules, context in plain English | ✅ |
+| **Connector-based (no log migration)** | ✅ Queries tools via API, no data movement | ✅ |
+| **Context graph enrichment** | ✅ Single-shot pre-enrichment for LLM triage | ✅ |
+| **Notifications** | ✅ Slack, Teams, PagerDuty, Email, Webhook | ✅ |
+| **Sigma rules** | ✅ Import, evaluate, built-in library | ✅ |
+| **Playbooks** | ✅ Declarative DAG with approval gating | ✅ |
+| **RBAC + SSO** | ✅ JWT, MFA, OIDC, SAML, API keys | ✅ |
+| **Open source** | ✅ MIT License | ❌ Proprietary |
 
 ---
 
-## Quick start
+## Quick Start
 
-### What you need
+### Prerequisites
 
-- Python 3.11 or newer
+- Python 3.11+
 - Git
-- Optional: Docker and Docker Compose
-- PostgreSQL for production use
-- SQLite is fine for local testing
+- Optional: Docker & Docker Compose, PostgreSQL
 
-### Run locally with Python
+### Run locally
 
 ```bash
 git clone https://github.com/sushantkane123/BradlyAI.git
 cd BradlyAI
 
 python -m venv .venv
-source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
+source .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
 
 pip install -r requirements.txt
 cp .env.example .env
 python run.py --reload
 ```
 
-Open these URLs:
+Open:
 
-```text
-Dashboard:  http://127.0.0.1:8000/
-API docs:   http://127.0.0.1:8000/docs
-Health:     http://127.0.0.1:8000/health
-```
+| URL | Description |
+|---|---|
+| `http://127.0.0.1:8000/` | Main SOC Dashboard |
+| `http://127.0.0.1:8000/dropzone` | **Dropzone-style Autonomous Dashboard** |
+| `http://127.0.0.1:8000/docs` | Interactive API Reference |
+| `http://127.0.0.1:8000/api/v1/dropzone/dashboard` | Investigation Stats API |
 
 ### Run with Docker
 
 ```bash
-git clone https://github.com/sushantkane123/BradlyAI.git
-cd BradlyAI
 cp .env.example .env
 docker compose up --build
 ```
 
 ---
 
-## Try it with real-shaped test data
+## Try Autonomous Investigation
 
-The included configuration starts with no fake dashboard alerts:
-
-```dotenv
-DEMO_DATA_ENABLED=false
-LIVE_SIMULATION_WORKER_ACTIVE=false
-INGESTION_DEFAULT_MODE=shadow
-```
-
-That means the dashboard will show only alerts you send to it.
-
-### Send a safe Microsoft Sentinel test alert
+### 1. Send an alert → auto-investigate (Dropzone-style)
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/ingest/events \
-  -H 'Content-Type: application/json' \
-  --data @examples/real-data/sentinel-powershell.json
-```
-
-### Send a batch of SIEM, XDR, and EDR test alerts
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/ingest/events/batch \
-  -H 'Content-Type: application/json' \
-  --data @examples/real-data/batch.json
-```
-
-Then refresh the dashboard or run:
-
-```bash
-curl http://127.0.0.1:8000/api/v1/alerts
-```
-
-More examples are in [`examples/real-data`](examples/real-data/README.md).
-
----
-
-## Supported alert sources
-
-| Source | Status |
-|---|---|
-| Wazuh | Supported |
-| Splunk | Supported |
-| Microsoft Sentinel | Supported |
-| Microsoft Defender for Endpoint | Supported |
-| CrowdStrike Falcon | Supported |
-| Elastic / Elasticsearch | Supported |
-| Generic SIEM | Supported |
-| Generic XDR | Supported |
-| Generic EDR | Supported |
-| Custom webhooks | Supported |
-
-A source event is sent in this format:
-
-```json
-{
-  "source": "sentinel",
-  "mode": "shadow",
-  "payload": {
-    "SystemAlertId": "example-001",
-    "AlertDisplayName": "Suspicious PowerShell command",
-    "Severity": "High",
-    "CompromisedEntity": "LAB-WIN-01"
-  }
-}
-```
-
-Send it to:
-
-```text
-POST /api/v1/ingest/events
-```
-
----
-
-## Investigation agent
-
-For each stored alert, an authenticated analyst can run an investigation.
-
-The agent:
-
-1. Reads the original alert evidence
-2. Checks related alerts from the previous 24 hours
-3. Checks asset and source information
-4. Identifies missing evidence
-5. Builds possible explanations
-6. Recommends escalation, review, or an approved-policy candidate
-7. Saves the investigation record for later review
-
-API route:
-
-```text
-POST /api/v1/agent/alerts/{alert_id}/investigate
-```
-
-The agent does **not** make containment changes on its own.
-
-Read more in [docs_SOC_INVESTIGATION_AGENT.md](docs_SOC_INVESTIGATION_AGENT.md).
-
----
-
-## Cases
-
-Analysts can create a case from an alert or create a case manually.
-
-Each case can include:
-
-- Priority and severity
-- Assignee
-- Status
-- Linked alerts
-- Notes
-- Evidence such as IPs, hashes, URLs, domains, hosts, and logs
-- SLA information
-
-Open the **Cases** page in the dashboard after signing in.
-
----
-
-## Wazuh quick test
-
-BradlyAI can be tested with Wazuh without connecting to a real production manager:
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/integration/wazuh/test-webhook \
+curl -X POST http://127.0.0.1:8000/api/v1/dropzone/ingest-and-investigate \
   -H 'Content-Type: application/json' \
   -d '{
-    "rule_level": 3,
-    "rule_id": "1001",
-    "rule_description": "Vulnerability scanner heartbeat",
-    "agent_name": "LAB-SCANNER",
-    "agent_ip": "10.0.0.50",
-    "mitre_id": "T1595"
+    "source": "sentinel",
+    "auto_investigate": true,
+    "payload": {
+      "SystemAlertId": "test-001",
+      "AlertDisplayName": "Suspicious PowerShell encoded command detected",
+      "Severity": "High",
+      "CompromisedEntity": "LAB-WIN-01",
+      "Entities": {"hostname": "LAB-WIN-01", "source_ip": "10.0.0.45"}
+    }
   }'
 ```
 
-For a real Wazuh connection, start with:
+### 2. Auto-investigate all pending alerts
 
-```dotenv
-WAZUH_ENABLED=true
-WAZUH_DRY_RUN=true
-WAZUH_CLOSE_MODE=comment_only
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/dropzone/investigate/all?limit=50
 ```
 
-Do not enable archive or close actions until your team has reviewed the results in shadow mode.
+### 3. View investigation results
+
+```bash
+curl http://127.0.0.1:8000/api/v1/dropzone/investigations?limit=10
+curl http://127.0.0.1:8000/api/v1/dropzone/dashboard?since_hours=24
+```
+
+### 4. Investigate a specific alert
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/dropzone/investigate/ALT-8921
+```
 
 ---
 
-## Important API routes
+## Autonomous Investigation Flow
 
-| Route | What it does |
-|---|---|
-| `GET /health` | Checks that the application is running |
-| `GET /api/v1/alerts` | Lists alerts |
-| `GET /api/v1/alerts/{id}` | Shows one alert and its evidence |
-| `POST /api/v1/ingest/events` | Receives one real alert event |
-| `POST /api/v1/ingest/events/batch` | Receives many alert events |
-| `GET /api/v1/ingest/sources` | Lists accepted source types |
-| `POST /api/v1/agent/alerts/{id}/investigate` | Runs an investigation |
-| `GET/POST /api/v1/cases` | Lists or creates cases |
-| `GET /api/v1/l1/audit` | Shows L1 decision history |
-| `GET /api/v1/integration/wazuh/health` | Checks Wazuh integration status |
-
-Use `/docs` for the full interactive API reference.
+```
+Security alert arrives from SIEM/XDR/EDR
+     ↓
+┌─────────────────────────────────────────┐
+│  O — OBTAIN                              │
+│  Normalize, extract entities, classify   │
+├─────────────────────────────────────────┤
+│  S — STRATEGIZE                          │
+│  Formulate 3+ hypotheses, plan queries   │
+├─────────────────────────────────────────┤
+│  C — COLLECT                             │
+│  Query EDR, Identity, Network, TI, SIEM  │
+├─────────────────────────────────────────┤
+│  A — ANALYZE (recursive)                 │
+│  Evaluate evidence → confidence low?     │
+│  → Deepen analysis → Evaluate again      │
+├─────────────────────────────────────────┤
+│  R — REPORT                              │
+│  BENIGN / SUSPICIOUS / MALICIOUS         │
+│  + confidence + reasoning + evidence     │
+└─────────────────────────────────────────┘
+     ↓
+Auto-close (benign)  or  Escalate to L2 analyst
+```
 
 ---
 
-## Security notes
+## Dropzone API Reference
 
-Before using BradlyAI with a real customer:
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/v1/dropzone/ingest-and-investigate` | Ingest alert + auto-investigate (Dropzone-style) |
+| `POST` | `/api/v1/dropzone/investigate/{alert_id}` | Full OSCAR investigation on existing alert |
+| `POST` | `/api/v1/dropzone/investigate/all` | Auto-investigate all pending alerts |
+| `GET` | `/api/v1/dropzone/investigations` | List all autonomous investigations |
+| `GET` | `/api/v1/dropzone/investigations/{id}` | Full investigation detail with OSCAR steps |
+| `GET` | `/api/v1/dropzone/dashboard` | Investigation stats, throughput, connectors |
+| `POST` | `/api/v1/dropzone/webhook/alert` | Webhook for SIEM/SOAR tools to push alerts |
 
-- Use HTTPS
-- Use PostgreSQL, backups, and restricted database access
-- Use a strong `AUTH_JWT_SECRET`
-- Change the bootstrap admin password
-- Use MFA and SSO when possible
-- Store secrets in a secret manager, not in Git or chat
-- Start in shadow mode
-- Use IP allow-lists and webhook authentication
-- Require human approval for containment actions
+---
 
-See [docs_REAL_DATA_MODE.md](docs_REAL_DATA_MODE.md) for safe ingestion guidance.
+## Supported Alert Sources
+
+| Source | Auto-Investigate | Notes |
+|---|---|---|
+| Wazuh | ✅ | Webhook + Manager API integration |
+| Splunk | ✅ | REST API + webhook |
+| Microsoft Sentinel | ✅ | Azure Monitor integration |
+| Microsoft Defender for Endpoint | ✅ | Full EDR connector |
+| CrowdStrike Falcon | ✅ | Full EDR connector |
+| Elastic / ELK | ✅ | REST API |
+| IBM QRadar | ✅ | REST API |
+| Generic SIEM | ✅ | Webhook-based, any format |
+| Generic XDR/EDR | ✅ | Webhook-based, any format |
+| Custom webhooks | ✅ | `POST /api/v1/dropzone/webhook/alert` |
+
+---
+
+## Project Structure
+
+```text
+bradlyai/
+├── routers/
+│   ├── dropzone.py            # ⭐ Dropzone autonomous investigation API
+│   ├── agent.py               # Evidence-first investigation agent
+│   ├── l1_agent.py            # L1 decision engine API
+│   ├── auth.py, cases.py ...  # RBAC, case management, etc.
+├── services/
+│   ├── dropzone_agent.py      # ⭐ OSCAR autonomous investigation engine
+│   ├── investigation_agent.py # Evidence-first investigation
+│   ├── l1_decision_engine.py  # 5-signal L1 decision engine
+│   ├── context_graph.py       # 360° context enrichment
+│   ├── edr/, identity/, network/, threatintel/  # Security tool connectors
+├── models/                    # Database models
+├── static/
+│   ├── dropzone.html          # ⭐ Dropzone-style autonomous dashboard
+│   ├── index.html             # Main SOC dashboard
+├── tests/                     # 62+ tests
+└── examples/real-data/        # Test alert payloads
+```
+
+---
+
+## Security Notes
+
+- All integrations default to **disabled + dry-run** — must be explicitly enabled
+- Autonomous agent **never** performs containment without explicit configuration
+- Start in shadow mode, review results, then enable active mode
+- Change `AUTH_JWT_SECRET` and bootstrap admin password in production
+- Use HTTPS, PostgreSQL, and a secret manager for production
 
 ---
 
 ## Contributing
 
-Contributions are welcome.
-
 ```bash
 git fork https://github.com/sushantkane123/BradlyAI.git
 cd BradlyAI
 pip install -r requirements.txt
-pytest -q
-```
-
-Before opening a pull request:
-
-1. Keep changes focused.
-2. Add or update tests.
-3. Run `pytest -q`.
-4. Do not add secrets, real client data, or production credentials.
-5. Explain what changed and how it was tested.
-
-Current test suite:
-
-```text
-62 tests passing
+pytest -q  # 62 tests passing
 ```
 
 ---
-
-## Project structure
-
-```text
-bradlyai/
-├── routers/       API routes
-├── services/      SOC logic, decisions, investigations, integrations
-├── models/        Database models
-├── static/        Dashboard files
-├── migrations.py  Database migration helper
-examples/          Safe replay examples
-tests/             Automated tests
-docs_*.md          Feature guides
-```
 
 ## License
 
