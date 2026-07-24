@@ -1,86 +1,78 @@
-# BradlyAI — Evidence-First SOC Operations
+# BradlyAI
 
-![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688?style=flat-square)
-![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-62%20passing-16a34a?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-f5c518?style=flat-square)
+**BradlyAI helps security teams investigate alerts from SIEM, XDR, EDR, and custom security tools.**
 
-**BradlyAI** is a policy-governed SOC operations platform for investigating security alerts from SIEM, XDR, EDR, and custom sources. It retains source evidence, correlates local history, creates analyst cases, and produces explainable recommendations—not unbounded autonomous containment.
+It collects alert evidence, checks recent history, helps analysts create cases, and recommends what to do next:
 
-> **Safety first:** Start every deployment in real-data **shadow mode**. BradlyAI records evidence and recommendations without external close, archive, containment, or account actions until a customer-approved policy explicitly permits them.
+```text
+Escalate  → needs analyst attention
+Review    → more evidence is needed
+Auto-close candidate → may be safe only after customer policy and analyst approval
+```
+
+BradlyAI is built for security teams, MSSPs, contributors, and anyone learning how modern SOC automation works.
+
+> BradlyAI starts in a safe mode. It does not automatically isolate devices, disable users, block IPs, or close high-risk alerts.
+
+---
+
+## What can BradlyAI do?
+
+- Show security alerts in a SOC dashboard
+- Accept alerts from multiple security tools
+- Keep the original source event as evidence
+- Help investigate alerts using a structured SOC workflow
+- Create and track investigation cases
+- Record notes, evidence, decisions, and audit history
+- Work in **shadow mode** before any automated action is enabled
+- Support Wazuh, Splunk, Microsoft Sentinel, Microsoft Defender, CrowdStrike, Elastic, generic SIEM, XDR, EDR, and custom webhooks
+
+---
 
 ## How it works
 
 ```text
-SIEM / XDR / EDR / custom event
-              │
-              ▼
-Normalize + retain original source evidence
-              │
-              ▼
-L1 decision signals + local correlation
-              │
-              ▼
-Evidence-first SOC investigation agent
-              │
-              ▼
-ESCALATE / REVIEW / AUTO_CLOSE_CANDIDATE
-              │
-              ▼
-Analyst case workflow, approval, audit, and policy-gated response
+Security alert
+     ↓
+BradlyAI normalizes and stores the alert
+     ↓
+L1 decision checks rules, history, repeats, and policies
+     ↓
+Investigation agent collects available evidence and creates a plan
+     ↓
+Analyst reviews the recommendation
+     ↓
+Case, escalation, or approved policy action
 ```
 
-## Core capabilities
-
-| Capability | Description |
-|---|---|
-| **SOC dashboard** | Overview, alert queue, investigation drawer, integration health, and authenticated case workspace. |
-| **Real-data mode** | Starts with no seeded showcase alerts and no simulation worker when configured for client/lab use. |
-| **Multi-source ingestion** | Normalizes Wazuh, Splunk, Sentinel, Defender, CrowdStrike, Elastic, generic SIEM/XDR/EDR, and custom events. |
-| **Raw evidence retention** | Preserves normalized source, signature, and original JSON payload for review. |
-| **L1 decision engine** | Uses rule-based FP checks, recurrence, allow-lists, history, and optional LLM enrichment. |
-| **SOC investigation agent** | Builds a structured plan, evidence, hypotheses, policy evaluation, and recommendation for analysts. |
-| **Case management** | Creates cases from alerts, tracks ownership/status/SLA, and records notes and evidence. |
-| **Wazuh controls** | Disabled-by-default integration, dry run, comment-only, and configurable close policy. |
-| **Enterprise foundation** | JWT/API-key auth, RBAC, MFA support, SSO scaffolding, tenant model, audit logs, metrics, and reports. |
-
-## Supported sources
-
-```text
-Wazuh                     Splunk
-Microsoft Sentinel        Microsoft Defender for Endpoint
-CrowdStrike Falcon        Elastic / Elasticsearch / ELK
-Generic SIEM              Generic XDR
-Generic EDR               Jira
-Custom webhook payloads
-```
-
-Adapters normalize alert ID, severity, asset, IP, user, process, MITRE technique, timestamp, and source evidence. Direct vendor API polling/query collectors can be added per client after credentials, network access, and tenant policy are approved.
+---
 
 ## Quick start
 
-### Requirements
+### What you need
 
-- Python 3.11+ (Python 3.13 is tested)
+- Python 3.11 or newer
 - Git
-- Optional: Docker Engine and Docker Compose v2
-- PostgreSQL for client/production deployments; SQLite is for local development only
+- Optional: Docker and Docker Compose
+- PostgreSQL for production use
+- SQLite is fine for local testing
 
-### Local Python setup
+### Run locally with Python
 
 ```bash
 git clone https://github.com/sushantkane123/BradlyAI.git
 cd BradlyAI
 
 python -m venv .venv
-source .venv/bin/activate       # Windows PowerShell: .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
 
+pip install -r requirements.txt
 cp .env.example .env
 python run.py --reload
 ```
 
-Open:
+Open these URLs:
 
 ```text
 Dashboard:  http://127.0.0.1:8000/
@@ -88,7 +80,7 @@ API docs:   http://127.0.0.1:8000/docs
 Health:     http://127.0.0.1:8000/health
 ```
 
-### Docker
+### Run with Docker
 
 ```bash
 git clone https://github.com/sushantkane123/BradlyAI.git
@@ -97,20 +89,21 @@ cp .env.example .env
 docker compose up --build
 ```
 
-For production, place BradlyAI behind TLS/reverse-proxy infrastructure and do not expose PostgreSQL publicly.
+---
 
-## Real-data local testing
+## Try it with real-shaped test data
 
-The default `.env.example` is configured for a safe, empty workspace:
+The included configuration starts with no fake dashboard alerts:
 
 ```dotenv
 DEMO_DATA_ENABLED=false
 LIVE_SIMULATION_WORKER_ACTIVE=false
 INGESTION_DEFAULT_MODE=shadow
-WAZUH_ENABLED=false
 ```
 
-Only events you ingest or replay will appear in the dashboard. Replay a sanitized Sentinel event:
+That means the dashboard will show only alerts you send to it.
+
+### Send a safe Microsoft Sentinel test alert
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/ingest/events \
@@ -118,7 +111,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/ingest/events \
   --data @examples/real-data/sentinel-powershell.json
 ```
 
-Replay generic SIEM, XDR, and EDR fixtures:
+### Send a batch of SIEM, XDR, and EDR test alerts
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/ingest/events/batch \
@@ -126,151 +119,203 @@ curl -X POST http://127.0.0.1:8000/api/v1/ingest/events/batch \
   --data @examples/real-data/batch.json
 ```
 
-Inspect results:
+Then refresh the dashboard or run:
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/alerts
-curl 'http://127.0.0.1:8000/api/v1/l1/audit?since_hours=1'
 ```
 
-Read [examples/real-data/README.md](examples/real-data/README.md) and [docs_REAL_DATA_MODE.md](docs_REAL_DATA_MODE.md) for the replay contract.
+More examples are in [`examples/real-data`](examples/real-data/README.md).
 
-## Generic ingestion API
+---
 
-| Method | Route | Purpose |
-|---|---|---|
-| `GET` | `/api/v1/ingest/sources` | Supported adapters and safety mode |
-| `POST` | `/api/v1/ingest/events` | Persist and triage one real source event |
-| `POST` | `/api/v1/ingest/events/batch` | Bounded batch/replay ingestion |
+## Supported alert sources
 
-Single-event envelope:
+| Source | Status |
+|---|---|
+| Wazuh | Supported |
+| Splunk | Supported |
+| Microsoft Sentinel | Supported |
+| Microsoft Defender for Endpoint | Supported |
+| CrowdStrike Falcon | Supported |
+| Elastic / Elasticsearch | Supported |
+| Generic SIEM | Supported |
+| Generic XDR | Supported |
+| Generic EDR | Supported |
+| Custom webhooks | Supported |
+
+A source event is sent in this format:
 
 ```json
 {
   "source": "sentinel",
   "mode": "shadow",
   "payload": {
-    "SystemAlertId": "sentinel-lab-001",
-    "AlertDisplayName": "Suspicious PowerShell command line",
+    "SystemAlertId": "example-001",
+    "AlertDisplayName": "Suspicious PowerShell command",
     "Severity": "High",
     "CompromisedEntity": "LAB-WIN-01"
   }
 }
 ```
 
-Set `INGESTION_SHARED_SECRET` to require this header:
-
-```http
-X-Ingestion-Key: your-shared-secret
-```
-
-This is an additional application control, not a replacement for TLS, IP allow-lists, replay protection, rate limits, and preferably mTLS or an API gateway.
-
-## Evidence-first SOC investigation agent
-
-For an authenticated analyst with `alerts:read` permission:
+Send it to:
 
 ```text
-POST /api/v1/agent/alerts/{alert_id}/investigate
-GET  /api/v1/agent/alerts/{alert_id}/investigations
-GET  /api/v1/agent/investigations/{investigation_id}
+POST /api/v1/ingest/events
 ```
+
+---
+
+## Investigation agent
+
+For each stored alert, an authenticated analyst can run an investigation.
 
 The agent:
 
-1. Validates source evidence.
-2. Correlates matching alerts and asset activity from the previous 24 hours.
-3. Records observed evidence separately from missing connector evidence.
-4. Builds hypotheses and next steps.
-5. Recommends `ESCALATE`, `REVIEW`, or `AUTO_CLOSE_CANDIDATE` under safety policy.
-6. Saves the plan, evidence, hypotheses, policy result, and timestamps in a persistent investigation record.
+1. Reads the original alert evidence
+2. Checks related alerts from the previous 24 hours
+3. Checks asset and source information
+4. Identifies missing evidence
+5. Builds possible explanations
+6. Recommends escalation, review, or an approved-policy candidate
+7. Saves the investigation record for later review
 
-The agent **does not** directly isolate endpoints, disable users, block IPs, archive alerts, or automatically close high-risk incidents. See [docs_SOC_INVESTIGATION_AGENT.md](docs_SOC_INVESTIGATION_AGENT.md).
+API route:
 
-## Case management
+```text
+POST /api/v1/agent/alerts/{alert_id}/investigate
+```
 
-The authenticated Cases workspace supports:
+The agent does **not** make containment changes on its own.
 
-- Manual or alert-linked case creation
-- Priority, severity, assignee, status, and SLA tracking
-- Investigation notes
-- Evidence: IP, hash, domain, URL, host, log, and other artifacts
+Read more in [docs_SOC_INVESTIGATION_AGENT.md](docs_SOC_INVESTIGATION_AGENT.md).
+
+---
+
+## Cases
+
+Analysts can create a case from an alert or create a case manually.
+
+Each case can include:
+
+- Priority and severity
+- Assignee
+- Status
 - Linked alerts
-- Resolution and closure workflow
+- Notes
+- Evidence such as IPs, hashes, URLs, domains, hosts, and logs
+- SLA information
 
-## Wazuh integration
+Open the **Cases** page in the dashboard after signing in.
 
-Start with dry-run, comment-only safety settings:
+---
+
+## Wazuh quick test
+
+BradlyAI can be tested with Wazuh without connecting to a real production manager:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/integration/wazuh/test-webhook \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "rule_level": 3,
+    "rule_id": "1001",
+    "rule_description": "Vulnerability scanner heartbeat",
+    "agent_name": "LAB-SCANNER",
+    "agent_ip": "10.0.0.50",
+    "mitre_id": "T1595"
+  }'
+```
+
+For a real Wazuh connection, start with:
 
 ```dotenv
 WAZUH_ENABLED=true
 WAZUH_DRY_RUN=true
 WAZUH_CLOSE_MODE=comment_only
-WAZUH_MANAGER_URL=https://wazuh.example.internal:55000
-WAZUH_USER=bradlyai_service_account
-WAZUH_PASSWORD=use-a-secret-manager
-WAZUH_VERIFY_SSL=true
 ```
 
-Test without contacting a production manager:
+Do not enable archive or close actions until your team has reviewed the results in shadow mode.
 
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/integration/wazuh/test-webhook \
-  -H 'Content-Type: application/json' \
-  -d '{"rule_level":3,"rule_id":"1001","rule_description":"Vulnerability scanner heartbeat","agent_name":"LAB-SCANNER","agent_ip":"10.0.0.50","mitre_id":"T1595"}'
-```
+---
 
-Do not enable archive/close actions until shadow results, customer policy, credentials, and action scope are reviewed.
+## Important API routes
 
-## Key API routes
-
-| Route | Purpose |
+| Route | What it does |
 |---|---|
-| `GET /health` | Application and database health |
-| `GET /api/v1/alerts` | Alert queue |
-| `GET /api/v1/alerts/{id}` | Alert detail and raw evidence |
-| `GET/POST /api/v1/l1/mode` | View/set L1 active or shadow mode |
-| `GET /api/v1/l1/audit` | L1 decision audit history |
-| `GET/POST /api/v1/cases` | Case queue and creation |
-| `POST /api/v1/integration/wazuh/test-webhook` | Safe Wazuh test |
-| `GET /api/v1/integration/wazuh/health` | Wazuh integration health |
+| `GET /health` | Checks that the application is running |
+| `GET /api/v1/alerts` | Lists alerts |
+| `GET /api/v1/alerts/{id}` | Shows one alert and its evidence |
+| `POST /api/v1/ingest/events` | Receives one real alert event |
+| `POST /api/v1/ingest/events/batch` | Receives many alert events |
+| `GET /api/v1/ingest/sources` | Lists accepted source types |
+| `POST /api/v1/agent/alerts/{id}/investigate` | Runs an investigation |
+| `GET/POST /api/v1/cases` | Lists or creates cases |
+| `GET /api/v1/l1/audit` | Shows L1 decision history |
+| `GET /api/v1/integration/wazuh/health` | Checks Wazuh integration status |
 
-Full interactive documentation: `/docs`.
+Use `/docs` for the full interactive API reference.
 
-## Security and client deployment checklist
+---
 
-Before onboarding a client:
+## Security notes
 
-- Use PostgreSQL, encrypted backups, and restricted database access.
-- Deploy behind TLS, WAF/reverse proxy, and network allow-lists.
-- Set a strong `AUTH_JWT_SECRET`; never use the development default in production.
-- Change the bootstrap admin password immediately.
-- Enable MFA and configure SSO/OIDC or SAML where required.
-- Use a client-specific tenant, connector credential, policy set, and ingestion key.
-- Keep all ingestion and response actions in shadow/dry-run mode first.
-- Require approval for containment, disable-user, block-IP, or destructive actions.
-- Store secrets in a secret manager, never in source control or chat.
+Before using BradlyAI with a real customer:
 
-## Testing
+- Use HTTPS
+- Use PostgreSQL, backups, and restricted database access
+- Use a strong `AUTH_JWT_SECRET`
+- Change the bootstrap admin password
+- Use MFA and SSO when possible
+- Store secrets in a secret manager, not in Git or chat
+- Start in shadow mode
+- Use IP allow-lists and webhook authentication
+- Require human approval for containment actions
+
+See [docs_REAL_DATA_MODE.md](docs_REAL_DATA_MODE.md) for safe ingestion guidance.
+
+---
+
+## Contributing
+
+Contributions are welcome.
 
 ```bash
+git fork https://github.com/sushantkane123/BradlyAI.git
+cd BradlyAI
+pip install -r requirements.txt
 pytest -q
 ```
 
-The current suite contains **62 tests**, including API, auth/RBAC, L1 decision, real event ingestion, and investigation-agent coverage.
+Before opening a pull request:
 
-## Repository layout
+1. Keep changes focused.
+2. Add or update tests.
+3. Run `pytest -q`.
+4. Do not add secrets, real client data, or production credentials.
+5. Explain what changed and how it was tested.
+
+Current test suite:
+
+```text
+62 tests passing
+```
+
+---
+
+## Project structure
 
 ```text
 bradlyai/
-├── routers/              # APIs: alerts, ingest, cases, agent, integrations
-├── services/             # L1 decisioning, evidence investigation, connectors
-├── models/               # Alerts, investigations, cases, tenants, audit records
-├── static/               # SOC dashboard
-├── migrations.py         # Lightweight schema migration helper
-examples/real-data/       # Sanitized SIEM/XDR/EDR replay fixtures
-docs_REAL_DATA_MODE.md
-docs_SOC_INVESTIGATION_AGENT.md
+├── routers/       API routes
+├── services/      SOC logic, decisions, investigations, integrations
+├── models/        Database models
+├── static/        Dashboard files
+├── migrations.py  Database migration helper
+examples/          Safe replay examples
+tests/             Automated tests
+docs_*.md          Feature guides
 ```
 
 ## License
