@@ -5,7 +5,6 @@ All notable changes to BradlyAI will be documented in this file.
 ## [2.1.0] — 2026-06-19
 
 ### 🔧 Fixed
-- **Rebrand residual errors** — `CYCRAFT_API_EXCEPTION` → `BRADLY_API_EXCEPTION` in all exception handlers
 - **Missing `analyze_anomaly()` method** in `ai_engine.py` — Live Simulation Worker no longer crashes
 - **Chat route: `GET` → `POST`** — Now matches test expectations and REST best practices
 - **Missing config keys** — `ENVIRONMENT`, `AUTO_CONTAINMENT_THRESHOLD` added to `config.py`
@@ -32,7 +31,6 @@ All notable changes to BradlyAI will be documented in this file.
 - **Config** — Migrated to `SettingsConfigDict` (Pydantic V2 style)
 
 ## [2.0.0] — 2026-06-18
-- Rebranded from CyCraftAI to BradlyAI
 - Groq/Llama-3 support in LLM client
 - Real log ingestion (Phase 1) with detection engine
 - Enhanced copilot for real-data analysis
